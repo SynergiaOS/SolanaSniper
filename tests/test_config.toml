@@ -1,0 +1,67 @@
+# SniperBot Test Configuration
+# Configuration file for test environments and test execution
+
+strategy = "microbot"
+
+[test_environment]
+# Test mode settings
+dry_run = true
+use_mock_apis = true
+log_level = "debug"
+test_timeout_seconds = 300
+
+[wallet]
+# Test wallet (never use in production)
+private_key = ""  # Will be generated for tests
+public_key = ""   # Will be generated for tests
+
+[rpc]
+# Test RPC endpoints (devnet/testnet)
+primary_url = "https://api.devnet.solana.com"
+backup_urls = [
+    "https://devnet.helius-rpc.com/?api-key=test",
+    "https://solana-devnet.g.alchemy.com/v2/test"
+]
+timeout_seconds = 30
+max_retries = 3
+
+[trading]
+# Conservative test settings
+dry_run = true  # Always true for tests
+max_position_size_sol = 0.01  # Very small for tests
+slippage_bps = 300  # 3%
+priority_fee_lamports = 1000
+stop_loss_percent = 10.0
+take_profit_percent = 20.0
+
+[microbot]
+# Test MicroBot settings
+initial_capital_sol = 0.01  # Small test amount
+min_liquidity_usd = 100.0   # Lower threshold for tests
+max_token_age_minutes = 10  # Longer for tests
+risk_threshold = 0.5        # Higher threshold for tests
+position_size_percent = 10.0  # Smaller positions
+
+[meteora]
+# Test Meteora settings
+min_pool_liquidity_usd = 1000.0
+max_initial_fee_bps = 2000  # 20%
+position_size_usd = 10.0    # Small test amount
+max_impermanent_loss_percent = 30.0
+compound_threshold_usd = 5.0
+
+[mem0]
+# Test Mem0.ai settings
+api_key = "test-key"  # Mock API key for tests
+user_id = "sniperbot-test"
+base_url = "http://localhost:3001"  # Mock server
+enabled = false  # Disabled by default for tests
+
+[jito]
+# Test Jito settings
+enabled = false  # Disabled by default for tests
+bundle_url = "http://localhost:3002"  # Mock server
+tip_account = "11111111111111111111111111111111"  # Test account
+min_tip_lamports = 1000
+max_tip_lamports = 10000
+tip_percentage = 10.0  # Lower for tests
