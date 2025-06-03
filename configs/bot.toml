@@ -1,0 +1,105 @@
+[bot]
+name = "SniperBot"
+version = "0.1.0"
+environment = "dev"
+update_interval_ms = 1000
+max_concurrent_orders = 10
+
+[risk_management]
+global_max_exposure = 10000.0
+max_daily_loss = 1000.0
+max_drawdown = 0.2
+position_sizing_method = "percentage"
+emergency_stop_enabled = true
+circuit_breaker_threshold = 0.05
+
+[database]
+sqlite_path = "data/sniper_bot.db"
+# redis_url = "redis://localhost:6379"
+# questdb_url = "postgresql://admin:quest@localhost:8812/qdb"
+# neo4j_url = "bolt://localhost:7687"
+
+[logging]
+level = "info"
+file_path = "logs/sniper_bot.log"
+max_file_size_mb = 100
+max_files = 10
+structured = true
+
+[api]
+host = "127.0.0.1"
+port = 8080
+cors_enabled = true
+auth_enabled = false
+# api_key = "your_api_key_here"
+
+# Exchange configurations
+[exchanges.binance]
+name = "Binance"
+api_key = "${BINANCE_API_KEY}"
+api_secret = "${BINANCE_API_SECRET}"
+sandbox = true
+rate_limit_per_second = 10
+enabled = false
+supported_pairs = ["BTCUSDT", "ETHUSDT", "SOLUSDT"]
+
+[exchanges.coinbase]
+name = "Coinbase Pro"
+api_key = "${COINBASE_API_KEY}"
+api_secret = "${COINBASE_API_SECRET}"
+sandbox = true
+rate_limit_per_second = 10
+enabled = false
+supported_pairs = ["BTC-USD", "ETH-USD", "SOL-USD"]
+
+# Solana/Helius configuration
+[exchanges.helius]
+name = "Helius Solana RPC"
+api_key = "40a78e4c-bdd0-4338-877a-aa7d56a5f5a0"
+api_secret = ""
+sandbox = false  # Using devnet
+rate_limit_per_second = 100
+enabled = true
+supported_pairs = ["SOL/USDC", "RAY/SOL", "BONK/SOL"]
+
+[exchanges.helius.endpoints]
+rpc_url = "https://devnet.helius-rpc.com/?api-key=40a78e4c-bdd0-4338-877a-aa7d56a5f5a0"
+secure_rpc_url = "https://nicolle-hyxhie-fast-devnet.helius-rpc.com"
+websocket_url = "wss://devnet.helius-rpc.com/?api-key=40a78e4c-bdd0-4338-877a-aa7d56a5f5a0"
+parse_transactions_url = "https://api-devnet.helius-rpc.com/v0/transactions/?api-key=40a78e4c-bdd0-4338-877a-aa7d56a5f5a0"
+parse_history_url = "https://api-devnet.helius-rpc.com/v0/addresses/{address}/transactions/?api-key=40a78e4c-bdd0-4338-877a-aa7d56a5f5a0"
+eclipse_url = "https://eclipse.helius-rpc.com/"
+
+# Strategy configurations
+[[strategies]]
+name = "simple_momentum"
+enabled = true
+pairs = ["BTCUSDT", "ETHUSDT"]
+
+[strategies.parameters]
+sma_short = 10
+sma_long = 30
+rsi_period = 14
+rsi_oversold = 30
+rsi_overbought = 70
+
+[strategies.risk_limits]
+max_position_size = 1000.0
+max_daily_loss = 100.0
+stop_loss_percentage = 0.02
+take_profit_percentage = 0.04
+
+[[strategies]]
+name = "arbitrage"
+enabled = false
+pairs = ["BTCUSDT"]
+
+[strategies.parameters]
+min_profit_threshold = 0.001
+max_position_size = 5000.0
+
+[strategies.risk_limits]
+max_position_size = 5000.0
+max_daily_loss = 200.0
+stop_loss_percentage = 0.01
+take_profit_percentage = 0.02

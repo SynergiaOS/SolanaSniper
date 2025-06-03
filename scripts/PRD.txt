@@ -1,0 +1,285 @@
+<context>
+# Overview  
+SniperBot to zaawansowany bot handlowy zbudowany od zera w Rust, zaprojektowany z myślą o maksymalnej wydajności, niezawodności i bezpieczeństwie. Bot wykorzystuje hybrydową architekturę łączącą rdzeń Rust o wysokiej wydajności z wyspecjalizowanymi modułami Python AI/ML uruchamianymi jako PyInstaller executables. Głównym celem jest stworzenie systemu handlowego o niskich opóźnieniach, który może działać w środowisku kryptowalut 24/7 z minimalnym ryzykiem awarii.
+
+# Core Features  
+## 1. Asynchroniczny Rdzeń Rust
+- **Tokio Runtime**: Wykorzystanie tokio dla asynchronicznych operacji I/O
+- **WebSocket Connections**: Połączenia w czasie rzeczywistym z giełdami (CEX/DEX)
+- **Concurrent Processing**: Równoległe przetwarzanie danych z wielu źródeł
+- **Memory Safety**: Gwarancje bezpieczeństwa pamięci Rust eliminujące błędy runtime
+
+## 2. Akwizycja Danych Multi-Source
+- **REST API Clients**: Klienci dla głównych giełd (Binance, Coinbase, Kraken)
+- **Blockchain Integration**: Natywne wsparcie dla Solana (solana-sdk) i EVM (ethers-rs)
+- **Real-time Data Streams**: WebSocket feeds dla cen, orderbook, transakcji
+- **Rate Limiting**: Inteligentne zarządzanie limitami API
+
+## 3. Hybrydowa Analiza AI/ML
+- **PyInstaller Executables**: Spakowane moduły Python dla specjalistycznych zadań
+  - `talib_minimal`: Analiza techniczna (SMA, RSI, MACD, Bollinger Bands)
+  - `social_scanner`: Skanowanie social media (Twitter, Reddit, Discord)
+  - `sentiment_analyzer`: Analiza sentymentu i emocji rynkowych
+- **Analytics Aggregator**: Rustowy moduł do orkiestracji wywołań Python executables
+- **JSON Communication**: Strukturalna komunikacja między Rust a Python
+
+## 4. Zaawansowane Zarządzanie Ryzykiem
+- **Dynamic Position Sizing**: Automatyczne dostosowanie wielkości pozycji
+- **Stop-Loss/Take-Profit**: Natywne mechanizmy ochrony kapitału
+- **Circuit Breakers**: Globalne limity strat z automatycznym zatrzymaniem
+- **Portfolio Monitoring**: Real-time tracking ekspozycji i P&L
+- **Volatility Adjustment**: Dostosowanie strategii do zmienności rynku
+
+## 5. Strategia i Backtesting
+- **Custom Strategy Engine**: Natywny silnik strategii w Rust
+- **Historical Backtesting**: Precyzyjny symulator z uwzględnieniem slippage i opłat
+- **Parameter Optimization**: Grid search dla optymalizacji parametrów
+- **Performance Metrics**: Sharpe Ratio, Max Drawdown, Win Rate, Profit Factor
+
+## 6. Bezpieczna Egzekucja
+- **Multi-Exchange Support**: Wsparcie dla CEX i DEX
+- **MEV Protection**: Integracja z Jito (Solana) i Flashbots (Ethereum)
+- **Secure Key Management**: Szyfrowane przechowywanie kluczy prywatnych
+- **Transaction Monitoring**: Real-time tracking statusu zleceń
+
+# User Experience  
+## User Personas
+- **Quantitative Traders**: Profesjonalni traderzy szukający niezawodnego narzędzia
+- **Crypto Enthusiasts**: Zaawansowani użytkownicy chcący zautomatyzować handel
+- **Fund Managers**: Zarządzający funduszami potrzebujący skalowalnych rozwiązań
+
+## Key User Flows
+1. **Setup Flow**: Konfiguracja API keys, wybór strategii, ustawienie parametrów ryzyka
+2. **Monitoring Flow**: Real-time dashboard z metrykami wydajności i statusem bota
+3. **Strategy Flow**: Tworzenie, testowanie i wdrażanie nowych strategii handlowych
+4. **Risk Management Flow**: Konfiguracja limitów, alertów i mechanizmów ochrony
+
+## UI/UX Considerations
+- **ag-ui Frontend**: Nowoczesny interfejs Next.js z real-time updates
+- **API Integration**: RESTful API w Rust (axum/warp) dla komunikacji z frontendem
+- **Mobile Responsive**: Dostęp z urządzeń mobilnych dla monitorowania
+- **Alert System**: Powiadomienia Telegram/Discord/Email dla krytycznych zdarzeń
+</context>
+<PRD>
+# Technical Architecture  
+## System Components
+### Core Rust Application
+- **Main Runtime**: Tokio-based async runtime z główną pętlą bota
+- **Data Fetcher Module**: Asynchroniczne klienty API (reqwest, tokio-tungstenite)
+- **Strategy Engine**: Natywne implementacje strategii handlowych
+- **Risk Manager**: Moduł zarządzania ryzykiem z real-time monitoring
+- **Order Executor**: Bezpieczny moduł egzekucji z retry logic
+- **Analytics Aggregator**: Orkiestrator dla PyInstaller executables
+
+### Data Storage Layer
+- **SQLite (rusqlite)**: Lokalne przechowywanie historii i konfiguracji
+- **Redis (redis-rs)**: High-performance caching dla danych real-time
+- **QuestDB**: Time-series database dla danych historycznych (via PostgreSQL protocol)
+- **Neo4j (neo4rs)**: Graph database dla knowledge management
+
+### AI/ML Integration
+- **PyInstaller Executables**: Standalone binaries dla AI/ML tasks
+- **ContextGem Service**: Centralna orkiestracja agentów LLM (FastAPI)
+- **Vector Store**: ChromaDB dla embeddings i semantic search
+- **Microsoft QLib**: Quantitative research platform (containerized)
+
+### Infrastructure
+- **Docker Containers**: Konteneryzacja wszystkich komponentów
+- **Kubernetes**: Orkiestracja dla środowiska produkcyjnego
+- **Monitoring**: Prometheus metrics + Grafana dashboards
+- **Logging**: Structured logging z tracing crate
+
+## Data Models
+### Core Trading Entities
+```rust
+struct MarketData {
+    symbol: String,
+    price: f64,
+    volume: f64,
+    timestamp: DateTime<Utc>,
+    source: DataSource,
+}
+
+struct Position {
+    symbol: String,
+    size: f64,
+    entry_price: f64,
+    current_price: f64,
+    pnl: f64,
+    risk_metrics: RiskMetrics,
+}
+
+struct Order {
+    id: String,
+    symbol: String,
+    side: OrderSide,
+    size: f64,
+    price: Option<f64>,
+    status: OrderStatus,
+    exchange: Exchange,
+}
+```
+
+## APIs and Integrations
+### External APIs
+- **Exchange APIs**: Binance, Coinbase Pro, Kraken, Uniswap, Jupiter
+- **Blockchain RPCs**: Solana RPC, Ethereum/Polygon nodes
+- **Social APIs**: Twitter API v2, Reddit API, Discord webhooks
+- **News APIs**: CoinGecko, CoinMarketCap, crypto news aggregators
+
+### Internal APIs
+- **REST API**: Axum-based API dla frontend communication
+- **WebSocket API**: Real-time updates dla UI
+- **gRPC Services**: Inter-service communication (opcjonalne)
+
+## Infrastructure Requirements
+### Development Environment
+- **Rust Toolchain**: Latest stable (1.70+)
+- **Docker**: Konteneryzacja i lokalne testowanie
+- **PostgreSQL**: Dla QuestDB compatibility
+- **Redis**: Caching layer
+
+### Production Environment
+- **Kubernetes Cluster**: AWS EKS lub GCP GKE
+- **Load Balancers**: Nginx Ingress Controller
+- **Monitoring Stack**: Prometheus + Grafana + AlertManager
+- **Secrets Management**: Kubernetes Secrets lub HashiCorp Vault
+
+# Development Roadmap  
+## Phase 0: Project Foundation (2-3 weeks)
+- Setup Rust project structure z Cargo workspaces
+- Konfiguracja CI/CD pipeline (GitHub Actions)
+- Podstawowa konteneryzacja z Docker
+- Wybór i implementacja podstawowej strategii handlowej
+- Setup logging i error handling
+
+## Phase 1: Data Acquisition MVP (3-4 weeks)
+- Implementacja REST API clients dla głównych giełd
+- WebSocket connections dla real-time data
+- Podstawowe przechowywanie w SQLite
+- Rate limiting i connection pooling
+- Unit testy dla data fetchers
+
+## Phase 2: Strategy Core & Backtesting (4-6 weeks)
+- Natywna implementacja podstawowych wskaźników technicznych
+- Custom backtesting engine w Rust
+- Strategy configuration system
+- Performance metrics calculation
+- Historical data management
+
+## Phase 3: Risk Management & Execution (3-4 weeks)
+- Comprehensive risk management module
+- Secure order execution system
+- Position tracking i portfolio management
+- Stop-loss/take-profit implementation
+- Emergency shutdown mechanisms
+
+## Phase 4: AI/ML Integration (4-5 weeks)
+- PyInstaller executables development
+- Analytics aggregator implementation
+- ContextGem service integration
+- Social sentiment analysis
+- Technical analysis enhancement
+
+## Phase 5: Production Deployment (2-3 weeks)
+- Kubernetes deployment manifests
+- Monitoring i alerting setup
+- Security hardening
+- Performance optimization
+- Load testing
+
+## Phase 6: Advanced Features (ongoing)
+- Multi-strategy support
+- Advanced ML models
+- Cross-exchange arbitrage
+- MEV protection
+- Scalability improvements
+
+# Logical Dependency Chain
+## Foundation First (Critical Path)
+1. **Rust Project Setup** → **Basic Data Fetching** → **Simple Strategy**
+2. **SQLite Storage** → **Configuration Management** → **Error Handling**
+3. **Tokio Runtime** → **Async HTTP Clients** → **WebSocket Connections**
+
+## Core Trading Logic
+1. **Data Acquisition** → **Strategy Engine** → **Risk Management** → **Order Execution**
+2. **Backtesting Engine** → **Strategy Validation** → **Parameter Optimization**
+3. **Position Tracking** → **P&L Calculation** → **Performance Metrics**
+
+## Advanced Features (Build Upon Core)
+1. **PyInstaller Integration** → **AI/ML Analytics** → **Enhanced Decision Making**
+2. **ContextGem Integration** → **LLM-powered Insights** → **Dynamic Strategy Adjustment**
+3. **Multi-Exchange Support** → **Arbitrage Opportunities** → **MEV Protection**
+
+## Production Readiness
+1. **Containerization** → **Kubernetes Deployment** → **Monitoring Setup**
+2. **Security Implementation** → **Secrets Management** → **Audit Logging**
+3. **Performance Optimization** → **Load Testing** → **Scalability Planning**
+
+# Risks and Mitigations  
+## Technical Challenges
+### Risk: Rust Learning Curve dla AI/ML
+**Mitigation**: Hybrydowa architektura z PyInstaller executables pozwala na wykorzystanie bogiego ekosystemu Python dla AI/ML przy zachowaniu wydajności Rust dla core logic.
+
+### Risk: Latency Requirements
+**Mitigation**: Rust zapewnia kontrolę na niskim poziomie, tokio dla async I/O, oraz optymalizacje kompilera dla maksymalnej wydajności.
+
+### Risk: Complex State Management
+**Mitigation**: Wykorzystanie Rust's ownership system dla bezpiecznego zarządzania stanem, Arc/Mutex dla shared state, oraz structured logging dla debugowania.
+
+## Market Risks
+### Risk: API Rate Limits
+**Mitigation**: Inteligentne rate limiting, connection pooling, oraz fallback mechanisms dla multiple data sources.
+
+### Risk: Exchange Downtime
+**Mitigation**: Multi-exchange support, automatic failover, oraz graceful degradation strategies.
+
+### Risk: Market Volatility
+**Mitigation**: Dynamic risk management, circuit breakers, oraz adaptive position sizing based na volatility metrics.
+
+## Operational Risks
+### Risk: Key Management
+**Mitigation**: Encrypted storage, Kubernetes secrets, rotation policies, oraz audit trails.
+
+### Risk: System Failures
+**Mitigation**: Comprehensive monitoring, automated alerts, health checks, oraz disaster recovery procedures.
+
+### Risk: Regulatory Compliance
+**Mitigation**: Audit logging, compliance monitoring, oraz flexible architecture dla regulatory adaptations.
+
+# Appendix  
+## Technology Stack Summary
+- **Core Language**: Rust (latest stable)
+- **Async Runtime**: Tokio
+- **HTTP Client**: Reqwest
+- **Serialization**: Serde + serde_json
+- **Database**: SQLite (rusqlite), Redis (redis-rs), QuestDB
+- **Logging**: Tracing + tracing-subscriber
+- **Testing**: Cargo test + integration tests
+- **Containerization**: Docker + Kubernetes
+- **Monitoring**: Prometheus + Grafana
+- **Frontend**: Next.js (ag-ui)
+- **AI/ML**: Python executables via PyInstaller
+
+## Key Rust Crates
+```toml
+[dependencies]
+tokio = { version = "1.0", features = ["full"] }
+reqwest = { version = "0.12", features = ["json"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+rusqlite = "0.29"
+redis = "0.23"
+ethers = "2.0"
+solana-sdk = "1.16"
+```
+
+## Performance Targets
+- **Latency**: <10ms dla order execution
+- **Throughput**: >1000 requests/second
+- **Uptime**: 99.9% availability
+- **Memory**: <512MB baseline usage
+- **CPU**: <50% utilization under normal load
+</PRD>

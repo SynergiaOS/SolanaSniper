@@ -1,0 +1,92 @@
+# SniperBot 2.0 Test Configuration
+# Configuration for integration tests with real APIs
+
+[bot]
+name = "SniperBot 2.0 Test"
+version = "0.1.0"
+dry_run = true
+paper_trading = true
+log_level = "debug"
+
+[solana]
+# Helius Devnet RPC endpoints
+rpc_url = "https://devnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}"
+enhanced_rpc_url = "https://api.helius.xyz/v0/addresses"
+commitment = "confirmed"
+timeout_seconds = 10
+
+[jupiter]
+# Jupiter V6 API (works with devnet)
+api_url = "https://quote-api.jup.ag/v6"
+swap_url = "https://quote-api.jup.ag/v6/swap"
+price_url = "https://price.jup.ag/v4/price"
+timeout_seconds = 5
+max_retries = 2
+
+[jito]
+# Jito devnet endpoints
+api_url = "https://mainnet.block-engine.jito.wtf/api/v1"
+tip_accounts = [
+    "96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5"
+]
+bundle_timeout_seconds = 10
+max_tip_lamports = 1000000  # 0.001 SOL for tests
+
+[exchanges.binance]
+enabled = false
+api_url = "https://api.binance.com"
+websocket_url = "wss://stream.binance.com:9443/ws"
+rate_limit_requests_per_minute = 1200
+
+[exchanges.raydium]
+enabled = true
+api_url = "https://api.raydium.io"
+program_id = "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8"
+
+[exchanges.pumpfun]
+enabled = false
+api_url = "https://pumpportal.fun/api"
+program_id = "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P"
+
+[exchanges.meteora]
+enabled = false
+api_url = "https://dlmm-api.meteora.ag"
+program_id = "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo"
+
+[risk_management]
+max_position_size_usd = 10.0
+max_daily_loss_usd = 5.0
+max_drawdown_percent = 5.0
+stop_loss_percent = 2.0
+take_profit_percent = 10.0
+max_slippage_bps = 100  # 1%
+
+[risk_management.position_limits]
+max_positions = 1
+max_exposure_per_token_percent = 50.0
+min_liquidity_usd = 1000.0
+
+[strategies.pumpfun_sniping]
+enabled = false
+confidence_threshold = 0.9
+
+[strategies.liquidity_sniping]
+enabled = false
+confidence_threshold = 0.9
+
+[analytics]
+python_executables_path = "./pyinstaller_executables"
+talib_binary = "talib_analyzer"
+social_scanner_binary = "social_scanner"
+sentiment_analyzer_binary = "sentiment_analyzer"
+
+[logging]
+level = "debug"
+file_path = "./logs/sniperbot_test.log"
+max_file_size_mb = 10
+max_files = 3
+
+[monitoring]
+metrics_enabled = false
+metrics_port = 9091
+health_check_port = 8081

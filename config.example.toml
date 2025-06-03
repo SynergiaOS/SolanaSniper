@@ -1,0 +1,241 @@
+# 🎯 SniperBot 2.0 - Example Configuration
+# Copy this file to config.toml and customize for your needs
+
+[bot]
+name = "SniperBot-2.0"
+version = "2.0.0"
+environment = "development"  # "development", "testing", "production"
+update_interval_ms = 100     # Data update frequency in milliseconds
+max_concurrent_orders = 5    # Maximum simultaneous orders
+dry_run = true              # Enable dry run mode (recommended for testing)
+paper_trading = false       # Enable paper trading mode
+
+[bot.performance]
+worker_threads = 4          # Number of async worker threads
+max_connections = 100       # Maximum HTTP connections
+connection_timeout_ms = 5000
+request_timeout_ms = 10000
+retry_attempts = 3
+retry_delay_ms = 1000
+
+# ===== EXCHANGE CONFIGURATIONS =====
+
+[exchanges.helius]
+name = "Helius Solana RPC"
+api_key = "your-helius-api-key-here"  # Get from https://helius.xyz
+enabled = true
+sandbox = false
+rate_limit_per_second = 10
+supported_pairs = ["SOL/USDC", "TOKEN/SOL"]
+
+[exchanges.helius.endpoints]
+rpc_url = "https://mainnet.helius-rpc.com"
+enhanced_api_url = "https://api.helius.xyz/v0"
+websocket_url = "wss://mainnet.helius-rpc.com"
+
+[exchanges.binance]
+name = "Binance"
+api_key = "your-binance-api-key"      # Optional: for CEX data
+api_secret = "your-binance-secret"    # Optional: for CEX data
+enabled = false                       # Disable if not using CEX data
+sandbox = false
+rate_limit_per_second = 10
+supported_pairs = ["BTCUSDT", "ETHUSDT", "SOLUSDT"]
+
+[exchanges.binance.endpoints]
+rest_url = "https://api.binance.com"
+websocket_url = "wss://stream.binance.com:9443"
+
+# ===== STRATEGY CONFIGURATIONS =====
+
+[strategies.pumpfun_sniping]
+enabled = true
+confidence_threshold = 0.75          # Minimum signal confidence (75%)
+max_position_size = 500.0           # Maximum position size in USD
+stop_loss_percentage = 15.0         # Stop loss percentage
+take_profit_percentage = 50.0       # Take profit percentage
+cooldown_seconds = 300              # 5 minutes between signals
+required_sources = ["pumpfun"]
+
+# PumpFun-specific parameters
+min_market_cap = 10000.0            # $10k minimum market cap
+max_market_cap = 1000000.0          # $1M maximum market cap
+min_volume_24h = 5000.0             # $5k minimum daily volume
+max_age_hours = 24.0                # Maximum token age in hours
+min_holder_count = 10               # Minimum number of holders
+graduation_threshold = 0.8          # Bonding curve graduation threshold
+bonding_curve_progress_min = 0.1    # Minimum bonding curve progress
+bonding_curve_progress_max = 0.9    # Maximum bonding curve progress
+max_slippage_bps = 500              # Maximum slippage in basis points (5%)
+min_liquidity = 1000.0              # Minimum liquidity in USD
+blacklisted_creators = []           # List of blacklisted creator addresses
+
+[strategies.liquidity_sniping]
+enabled = true
+confidence_threshold = 0.8          # Higher threshold for pool sniping
+max_position_size = 1000.0          # Maximum position size in USD
+stop_loss_percentage = 10.0         # Lower stop loss for established pools
+take_profit_percentage = 25.0       # Moderate take profit
+cooldown_seconds = 180              # 3 minutes between signals
+required_sources = ["raydium", "meteora"]
+
+# Liquidity pool specific parameters
+min_initial_liquidity = 5000.0      # $5k minimum initial liquidity
+max_initial_liquidity = 100000.0    # $100k maximum initial liquidity
+min_pool_age_minutes = 5.0          # Minimum pool age in minutes
+max_pool_age_hours = 12.0           # Maximum pool age in hours
+min_apr = 50.0                      # Minimum estimated APR
+max_price_impact = 3.0              # Maximum price impact percentage
+min_token_holders = 20              # Minimum token holder count
+max_token_supply = 1000000000.0     # Maximum token supply
+max_slippage_bps = 300              # Maximum slippage (3%)
+min_volume_ratio = 0.1              # Minimum volume/liquidity ratio
+
+# Preferred quote tokens (Solana addresses)
+preferred_quote_tokens = [
+    "So11111111111111111111111111111111111111112",  # SOL
+    "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"   # USDC
+]
+
+# ===== RISK MANAGEMENT =====
+
+[risk_management]
+global_max_exposure = 10000.0       # Maximum total position value
+max_daily_loss = 1000.0             # Maximum daily loss limit
+max_drawdown = 0.2                  # Maximum portfolio drawdown (20%)
+position_sizing_method = "percentage" # "fixed", "percentage", "volatility"
+emergency_stop_enabled = true       # Enable emergency stop functionality
+circuit_breaker_threshold = 0.05    # 5% loss triggers circuit breaker
+
+[risk_management.position_sizing]
+default_percentage = 2.0            # 2% of portfolio per trade
+max_percentage = 5.0                # Maximum 5% per trade
+min_position_size = 10.0            # Minimum position size in USD
+max_position_size = 2000.0          # Maximum position size in USD
+volatility_adjustment = true        # Adjust size based on volatility
+
+[risk_management.stops]
+default_stop_loss = 5.0             # Default 5% stop loss
+default_take_profit = 15.0          # Default 15% take profit
+trailing_stop_enabled = true        # Enable trailing stops
+trailing_stop_distance = 3.0        # 3% trailing distance
+max_stop_loss = 20.0                # Maximum allowed stop loss
+min_take_profit = 5.0               # Minimum take profit
+
+[risk_management.circuit_breakers]
+daily_loss_limit = 1000.0           # Daily loss limit
+portfolio_drawdown_limit = 0.15     # 15% portfolio drawdown limit
+consecutive_losses_limit = 5        # Stop after 5 consecutive losses
+volatility_threshold = 0.5          # Stop if volatility > 50%
+
+# ===== DATABASE CONFIGURATION =====
+
+[database]
+# SQLite (default and recommended for development)
+sqlite_path = "data/sniperbot.db"
+connection_pool_size = 10
+max_connections = 20
+connection_timeout_seconds = 30
+
+# Redis (optional, for caching)
+# redis_url = "redis://localhost:6379"
+# redis_password = ""
+# redis_db = 0
+# redis_pool_size = 10
+
+# QuestDB (optional, for time series data)
+# questdb_url = "http://localhost:9000"
+# questdb_username = "admin"
+# questdb_password = "quest"
+
+# ===== LOGGING CONFIGURATION =====
+
+[logging]
+level = "info"                      # "trace", "debug", "info", "warn", "error"
+file_path = "logs/sniperbot.log"
+max_file_size_mb = 100
+max_files = 10
+structured = true                   # Enable structured JSON logging
+
+[logging.modules]
+"sniperbot::data_fetcher" = "debug"
+"sniperbot::strategy" = "info"
+"sniperbot::risk_management" = "warn"
+"sniperbot::execution" = "debug"
+
+[logging.filters]
+exclude_patterns = ["heartbeat", "ping"]
+include_only = []                   # Empty = include all
+
+[logging.outputs]
+console = true
+file = true
+syslog = false
+
+# ===== API CONFIGURATION =====
+
+[api]
+host = "127.0.0.1"
+port = 8080
+cors_enabled = true
+auth_enabled = false                # Disable for development
+api_key = "your-secure-api-key-here"
+rate_limit_per_minute = 100
+max_request_size_mb = 10
+
+[api.websocket]
+enabled = true
+max_connections = 100
+heartbeat_interval_seconds = 30
+max_message_size_kb = 1024
+compression_enabled = true
+
+[api.tls]
+enabled = false                     # Enable for production
+cert_file = "certs/server.crt"
+key_file = "certs/server.key"
+ca_file = "certs/ca.crt"
+
+# ===== MONITORING =====
+
+[monitoring]
+prometheus_enabled = true
+prometheus_port = 9090
+grafana_enabled = true
+grafana_port = 3000
+health_check_interval_seconds = 30
+
+[monitoring.alerts]
+enabled = false                     # Enable for production
+webhook_url = ""                    # Slack/Discord webhook for alerts
+alert_on_errors = true
+alert_on_high_latency = true
+latency_threshold_ms = 1000
+
+# ===== DEVELOPMENT SETTINGS =====
+
+[development]
+mock_data_enabled = false           # Use mock data instead of real APIs
+simulation_speed = 1.0              # Speed up simulation (1.0 = real time)
+backtesting_enabled = false         # Enable backtesting mode
+save_raw_data = false               # Save raw API responses for debugging
+
+# ===== PRODUCTION OVERRIDES =====
+# Uncomment and modify for production deployment
+
+# [bot]
+# environment = "production"
+# dry_run = false
+# update_interval_ms = 50
+
+# [api]
+# auth_enabled = true
+# tls_enabled = true
+
+# [logging]
+# level = "info"
+# structured = true
+
+# [monitoring.alerts]
+# enabled = true
+# webhook_url = "https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK"

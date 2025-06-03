@@ -1,0 +1,294 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  test:
+    name: Test Suite
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rust:
+          - stable
+          - beta
+          - nightly
+    continue-on-error: ${{ matrix.rust == 'nightly' }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: ${{ matrix.rust }}
+        components: rustfmt, clippy
+
+    - name: Cache cargo registry
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-
+
+    - name: Check formatting
+      run: cargo fmt --all -- --check
+
+    - name: Run clippy
+      run: cargo clippy --all-targets --all-features -- -D warnings
+
+    - name: Run tests
+      run: cargo test --verbose --all-features
+      env:
+        HELIUS_API_KEY: ${{ secrets.HELIUS_API_KEY_TEST }}
+        JUPITER_API_KEY: ${{ secrets.JUPITER_API_KEY_TEST }}
+
+    - name: Run doc tests
+      run: cargo test --doc
+
+  security:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Install cargo-audit
+      run: cargo install cargo-audit
+
+    - name: Run security audit
+      run: cargo audit
+
+  coverage:
+    name: Code Coverage
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Install cargo-tarpaulin
+      run: cargo install cargo-tarpaulin
+
+    - name: Generate coverage report
+      run: cargo tarpaulin --verbose --all-features --workspace --timeout 120 --out xml
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: cobertura.xml
+        fail_ci_if_error: true
+
+  build:
+    name: Build Release
+    runs-on: ubuntu-latest
+    needs: [test, security]
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Cache cargo registry
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Build release binary
+      run: cargo build --release --verbose
+
+    - name: Upload binary artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: sniperbot-binary
+        path: target/release/sniper-bot
+
+  docker:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    needs: [test, security]
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Log in to Docker Hub
+      if: github.event_name != 'pull_request'
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: synergiaos/sniperbot
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile.prod
+        push: ${{ github.event_name != 'pull_request' }}
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+  benchmark:
+    name: Performance Benchmarks
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Cache cargo registry
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-bench-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Run benchmarks
+      run: cargo bench --verbose
+
+    - name: Upload benchmark results
+      uses: actions/upload-artifact@v3
+      with:
+        name: benchmark-results
+        path: target/criterion/
+
+  integration:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: [build]
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download binary artifact
+      uses: actions/download-artifact@v3
+      with:
+        name: sniperbot-binary
+        path: ./
+
+    - name: Make binary executable
+      run: chmod +x sniper-bot
+
+    - name: Run integration tests
+      run: |
+        # Start the bot in test mode
+        ./sniper-bot --config configs/test.toml --dry-run &
+        BOT_PID=$!
+        
+        # Wait for startup
+        sleep 10
+        
+        # Run integration tests
+        cargo test --test integration_tests
+        
+        # Cleanup
+        kill $BOT_PID || true
+      env:
+        REDIS_URL: redis://localhost:6379
+        HELIUS_API_KEY: ${{ secrets.HELIUS_API_KEY_TEST }}
+
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: [test, security, build, docker, integration]
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download binary artifact
+      uses: actions/download-artifact@v3
+      with:
+        name: sniperbot-binary
+        path: ./
+
+    - name: Create release archive
+      run: |
+        tar -czf sniperbot-${{ github.ref_name }}-linux-x86_64.tar.gz \
+          sniper-bot \
+          configs/ \
+          README.md \
+          LICENSE
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          sniperbot-${{ github.ref_name }}-linux-x86_64.tar.gz
+        generate_release_notes: true
+        draft: false
+        prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  notify:
+    name: Notify Status
+    runs-on: ubuntu-latest
+    needs: [test, security, build, docker]
+    if: always()
+    steps:
+    - name: Notify success
+      if: ${{ needs.test.result == 'success' && needs.security.result == 'success' && needs.build.result == 'success' && needs.docker.result == 'success' }}
+      run: |
+        echo "✅ All CI checks passed successfully!"
+        echo "🚀 SniperBot 2.0 is ready for deployment!"
+
+    - name: Notify failure
+      if: ${{ needs.test.result == 'failure' || needs.security.result == 'failure' || needs.build.result == 'failure' || needs.docker.result == 'failure' }}
+      run: |
+        echo "❌ CI checks failed!"
+        echo "🔧 Please review the failed jobs and fix the issues."
+        exit 1

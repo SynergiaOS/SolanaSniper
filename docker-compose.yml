@@ -1,0 +1,139 @@
+version: '3.8'
+
+services:
+  # Main SniperBot application
+  sniper-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sniper-bot
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./python_executables:/app/python_executables
+      - ./configs:/app/configs
+    environment:
+      - RUST_LOG=info
+      - BOT_ENVIRONMENT=dev
+    depends_on:
+      - redis
+      - questdb
+    networks:
+      - sniperbot-network
+
+  # Redis for caching
+  redis:
+    image: redis:7-alpine
+    container_name: sniper-bot-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - sniperbot-network
+
+  # QuestDB for time-series data
+  questdb:
+    image: questdb/questdb:7.3.10
+    container_name: sniper-bot-questdb
+    restart: unless-stopped
+    ports:
+      - "9000:9000"  # Web console
+      - "8812:8812"  # PostgreSQL wire protocol
+      - "9009:9009"  # InfluxDB line protocol
+    volumes:
+      - questdb_data:/root/.questdb
+    environment:
+      - QDB_CAIRO_COMMIT_LAG=1000
+      - QDB_PG_ENABLED=true
+      - QDB_HTTP_ENABLED=true
+    networks:
+      - sniperbot-network
+
+  # Neo4j for graph data (knowledge management)
+  neo4j:
+    image: neo4j:5.15-community
+    container_name: sniper-bot-neo4j
+    restart: unless-stopped
+    ports:
+      - "7474:7474"  # HTTP
+      - "7687:7687"  # Bolt
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+    environment:
+      - NEO4J_AUTH=neo4j/sniperbot123
+      - NEO4J_PLUGINS=["apoc"]
+      - NEO4J_dbms_security_procedures_unrestricted=apoc.*
+    networks:
+      - sniperbot-network
+
+  # Prometheus for metrics
+  prometheus:
+    image: prom/prometheus:v2.48.0
+    container_name: sniper-bot-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    networks:
+      - sniperbot-network
+
+  # Grafana for visualization
+  grafana:
+    image: grafana/grafana:10.2.2
+    container_name: sniper-bot-grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=sniperbot123
+      - GF_USERS_ALLOW_SIGN_UP=false
+    networks:
+      - sniperbot-network
+
+  # ChromaDB for vector storage
+  chromadb:
+    image: chromadb/chroma:0.4.18
+    container_name: sniper-bot-chromadb
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - chromadb_data:/chroma/chroma
+    environment:
+      - CHROMA_SERVER_HOST=0.0.0.0
+      - CHROMA_SERVER_HTTP_PORT=8000
+    networks:
+      - sniperbot-network
+
+volumes:
+  redis_data:
+  questdb_data:
+  neo4j_data:
+  neo4j_logs:
+  prometheus_data:
+  grafana_data:
+  chromadb_data:
+
+networks:
+  sniperbot-network:
+    driver: bridge
