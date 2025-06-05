@@ -158,12 +158,16 @@ impl RealtimeWebSocketManager {
     async fn connect_and_listen_helius(
         url: &str,
         event_sender: &mpsc::Sender<MarketEvent>,
-        config: &WebSocketConfig,
+        _config: &WebSocketConfig,
     ) -> TradingResult<()> {
-        // Substitute API key in URL
-        let resolved_url = url.replace("${HELIUS_API_KEY}", 
-            &std::env::var("HELIUS_API_KEY").unwrap_or_default());
-        
+        // Substitute API key in URL only if placeholder exists
+        let resolved_url = if url.contains("${HELIUS_API_KEY}") {
+            url.replace("${HELIUS_API_KEY}",
+                &std::env::var("HELIUS_API_KEY").unwrap_or_default())
+        } else {
+            url.to_string()
+        };
+
         let (ws_stream, _) = connect_async(&resolved_url)
             .await
             .map_err(|e| TradingError::NetworkError(format!("Failed to connect to Helius: {}", e)))?;
@@ -342,5 +346,36 @@ impl RealtimeWebSocketManager {
             .duration_since(UNIX_EPOCH)
             .unwrap_or_default()
             .as_millis() as u64
+    }
+
+    /// Subscribe to a symbol (placeholder implementation)
+    pub async fn subscribe_to_symbol(&self, symbol: &str) -> TradingResult<()> {
+        info!("📡 Subscribing to symbol: {}", symbol);
+        // In a real implementation, this would send subscription messages to active connections
+        // For now, we'll just log the subscription
+        Ok(())
+    }
+
+    /// Get connection status
+    pub async fn get_connection_status(&self) -> ConnectionStatus {
+        ConnectionStatus {
+            is_healthy: self.is_running.load(std::sync::atomic::Ordering::SeqCst),
+            helius_connected: self.config.helius_ws_url.is_some(),
+            binance_connected: self.config.binance_ws_url.is_some(),
+        }
+    }
+}
+
+/// Connection status information
+#[derive(Debug, Clone)]
+pub struct ConnectionStatus {
+    pub is_healthy: bool,
+    pub helius_connected: bool,
+    pub binance_connected: bool,
+}
+
+impl ConnectionStatus {
+    pub fn is_healthy(&self) -> bool {
+        self.is_healthy
     }
 }

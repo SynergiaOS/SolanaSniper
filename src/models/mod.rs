@@ -189,6 +189,7 @@ pub struct Trade {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Portfolio {
     pub total_value: f64,
+    pub total_value_usd: Option<f64>,
     pub available_balance: f64,
     pub unrealized_pnl: f64,
     pub realized_pnl: f64,
@@ -231,6 +232,29 @@ impl std::fmt::Display for SignalType {
     }
 }
 
+// AI-Enhanced Signal Processing
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AIEnhancedSignal {
+    pub original_signal: StrategySignal,
+    pub ai_recommendation: AIRecommendation,
+    pub ai_confidence: f64,
+    pub ai_analysis: String,
+    pub final_action: String, // "EXECUTE", "HOLD", "REJECT"
+    pub risk_score: f64,
+    pub market_context: serde_json::Value,
+    pub processing_timestamp: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AIRecommendation {
+    pub action: String, // "BUY", "SELL", "HOLD", "NO_ACTION"
+    pub confidence: f64, // 0.0 - 1.0
+    pub rationale: String,
+    pub target_price: Option<f64>,
+    pub stop_loss_price: Option<f64>,
+    pub strategy_parameters: std::collections::HashMap<String, String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AnalyticsResult {
     pub source: String, // talib_minimal, social_scanner, sentiment_analyzer
@@ -258,6 +282,8 @@ pub enum LegacyMarketEventType {
 pub enum TradingError {
     #[error("Configuration error: {0}")]
     ConfigError(String),
+    #[error("Configuration error: {0}")]
+    ConfigurationError(String),
     #[error("Exchange error: {0}")]
     ExchangeError(String),
 
@@ -309,6 +335,12 @@ pub enum TradingError {
 
     #[error("Signature verification failed: {0}")]
     SignatureVerificationFailed(String),
+
+    #[error("AI error: {0}")]
+    AIError(String),
+
+    #[error("Deserialization error: {0}")]
+    DeserializationError(String),
 }
 
 pub type TradingResult<T> = Result<T, TradingError>;
@@ -484,4 +516,48 @@ impl Default for WebSocketConfig {
             ],
         }
     }
+}
+
+// AI Decision Engine structures
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TokenInfo {
+    pub symbol: String,
+    pub name: Option<String>,
+    pub address: String,
+    pub price: f64,
+    pub market_cap: Option<f64>,
+    pub volume_24h: Option<f64>,
+    pub liquidity: Option<f64>,
+    pub age_hours: Option<f64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AggregatedAnalytics {
+    pub technical_score: f64,
+    pub social_score: f64,
+    pub sentiment_score: f64,
+    pub risk_score: f64,
+    pub overall_confidence: f64,
+    pub signals: Vec<AnalyticsResult>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MarketConditions {
+    pub volatility: f64,
+    pub liquidity_depth: f64,
+    pub volume_trend: String,
+    pub price_momentum: String,
+    pub market_cap: Option<f64>,
+    pub age_hours: Option<f64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PortfolioState {
+    pub total_balance_sol: f64,
+    pub available_balance_sol: f64,
+    pub total_value_usd: f64,
+    pub active_positions: u32,
+    pub daily_pnl: f64,
+    pub max_drawdown: f64,
+    pub risk_exposure: f64,
 }

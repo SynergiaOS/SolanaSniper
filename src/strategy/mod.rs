@@ -2,6 +2,9 @@ pub mod enhanced_strategy;
 pub mod pumpfun_sniping;
 pub mod liquidity_sniping;
 pub mod strategy_manager;
+pub mod arbitrage_strategy;
+pub mod meteora_dlmm_strategy;
+pub mod volume_spike_strategy;
 
 use crate::models::{MarketData, StrategySignal, TradingResult};
 use async_trait::async_trait;
@@ -15,6 +18,9 @@ pub use enhanced_strategy::{
 };
 pub use pumpfun_sniping::PumpFunSnipingStrategy;
 pub use liquidity_sniping::LiquidityPoolSnipingStrategy;
+pub use arbitrage_strategy::ArbitrageStrategy;
+pub use meteora_dlmm_strategy::MeteoraDLMMStrategy;
+pub use volume_spike_strategy::VolumeSpikeStrategy;
 pub use strategy_manager::{StrategyManager, StrategyPerformance};
 
 #[async_trait]

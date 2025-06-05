@@ -7,6 +7,7 @@ pub mod raydium_client;
 pub mod pumpfun_client;
 pub mod meteora_client;
 pub mod data_aggregator;
+pub mod market_scanner;
 pub mod websocket_manager;
 pub mod realtime_websocket_manager;
 

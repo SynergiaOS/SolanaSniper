@@ -36,7 +36,9 @@ tracing-appender = "0.2"
 
 # Database
 rusqlite = { version = "0.32", features = ["bundled"] }
-redis = { version = "0.26", features = ["tokio-comp"] }
+redis = { version = "0.26", features = ["tokio-comp"] }  # DragonflyDB is Redis-compatible
+deadpool-redis = "0.14"  # Connection pooling for DragonflyDB
+bb8-redis = "0.15"  # Alternative connection pool
 
 # Blockchain integration
 solana-sdk = "2.0"
@@ -70,18 +72,26 @@ dashmap = "6.0"
 async-trait = "0.1"
 urlencoding = "2.1"
 
+# Python integration for Graphiti (commented out for now)
+# pyo3 = { version = "0.22", features = ["auto-initialize"] }
+# pyo3-asyncio = "0.20"  # Async Python integration
+
 
 
 # Metrics and monitoring
 prometheus = "0.13"
 
 # Web framework for API
-axum = "0.7"
+axum = { version = "0.7", features = ["ws"] }
 tower = "0.4"
-tower-http = { version = "0.5", features = ["cors", "trace"] }
+tower-http = { version = "0.5", features = ["cors", "trace", "fs"] }
+
+# Internal crates
+sniperbot_ui_api = { path = "crates/sniperbot_ui_api" }
 
 # Security
 ring = "0.17"
+mistralai-client = "0.14.0"
 
 [dev-dependencies]
 tokio-test = "0.4"

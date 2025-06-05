@@ -1,12 +1,30 @@
-# 🎯 SniperBot 2.0 - Ultra-Fast Solana Token Sniping Bot
+# 🚀 SniperBot 2.0 - Revolutionary AI Trading Bot
 
 [![Rust](https://img.shields.io/badge/rust-1.75+-orange.svg)](https://www.rust-lang.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Docker](https://img.shields.io/badge/docker-ready-blue.svg)](https://www.docker.com)
-[![Tests](https://img.shields.io/badge/tests-43%20passing-green.svg)](#testing)
-[![Coverage](https://img.shields.io/badge/coverage-85%25-brightgreen.svg)](#testing)
+[![Graphiti](https://img.shields.io/badge/Graphiti-Knowledge%20Graph-purple.svg)](https://github.com/getzep/graphiti)
+[![DragonflyDB](https://img.shields.io/badge/DragonflyDB-25x%20Faster-red.svg)](https://dragonflydb.io)
 
-**SniperBot 2.0** is a cutting-edge, ultra-fast trading bot specifically designed for **early token detection and sniping** on the Solana blockchain. Built with Rust for maximum performance and reliability, it features advanced AI-driven strategies, real-time data aggregation from 6+ sources, and specialized algorithms for Pump.fun and DEX sniping.
+**The most intelligent Solana trading bot powered by Graphiti Knowledge Graph and DragonflyDB ultra-fast cache.**
+
+## 🧠 Revolutionary Architecture
+
+SniperBot 2.0 features a cutting-edge technology stack that sets it apart from all other trading bots:
+
+### 🎯 **Core Technologies:**
+- **🧠 Graphiti Knowledge Graph** - Temporal trading relationships and AI-powered analysis
+- **🐉 DragonflyDB** - Ultra-fast cache (25x faster than Redis, 80% cost savings)
+- **🤖 AI Decision Engine** - Mistral AI integration for intelligent trading decisions
+- **⚡ Real-time WebSocket** - Helius + Binance feeds for instant market data
+- **🦀 Rust Core** - High-performance, memory-safe trading engine
+
+### 🏆 **Competitive Advantages:**
+1. **Temporal Knowledge Graph** - Understands market patterns over time
+2. **Ultra-Performance Caching** - Sub-millisecond data access
+3. **AI-Powered Decisions** - Graph-enhanced machine learning
+4. **Real-time Relationship Discovery** - Finds hidden market correlations
+5. **Enterprise-Grade Scalability** - Built for high-frequency trading
 
 ## 🚀 Features
 
@@ -68,14 +86,33 @@
                        └─────────────────┘
 ```
 
-## 🛠️ Quick Start
+## 🛠️ Revolutionary Stack Setup
 
 ### Prerequisites
-- Rust 1.75+
-- Docker & Docker Compose
-- Git
+- **Rust 1.75+** - High-performance core
+- **Python 3.10+** - Graphiti Knowledge Graph
+- **Docker & Docker Compose** - Infrastructure
+- **Git** - Version control
 
-### Installation
+### 🚀 One-Command Setup
+
+```bash
+# Clone and setup the revolutionary stack
+git clone https://github.com/SynergiaOS/SniperBot.git
+cd SniperBot
+chmod +x setup_dev_environment.sh
+./setup_dev_environment.sh
+```
+
+This script will:
+- ✅ Setup **Graphiti Knowledge Graph** (Neo4j)
+- ✅ Setup **DragonflyDB** ultra-fast cache
+- ✅ Install Python dependencies
+- ✅ Build Rust project
+- ✅ Start all services
+- ✅ Test connections
+
+### 🔧 Manual Setup
 
 1. **Clone the repository**
    ```bash
@@ -83,21 +120,28 @@
    cd SniperBot
    ```
 
-2. **Set up environment**
+2. **Start infrastructure services**
    ```bash
-   cp .env.template .env
-   # Edit .env with your API keys and configuration
+   docker-compose -f docker-compose.dev.yml up -d
    ```
 
-3. **Build and run with Docker**
+3. **Setup Python environment for Graphiti**
    ```bash
-   docker-compose up -d
+   python3 -m venv venv
+   source venv/bin/activate
+   pip install -r requirements.txt
    ```
 
-4. **Or run locally**
+4. **Configure environment**
+   ```bash
+   cp .env.example .env
+   # Edit .env with your API keys
+   ```
+
+5. **Build and run SniperBot**
    ```bash
    cargo build --release
-   ./target/release/sniper-bot --config configs/bot.toml
+   cargo run --bin sniper-bot -- --dry-run
    ```
 
 ### Configuration
@@ -108,9 +152,48 @@ Edit `configs/bot.toml` to configure:
 - Risk management parameters
 - Database connections
 
+## 🖥️ Modern Web Interface
+
+SniperBot 2.0 features a cutting-edge React/TypeScript frontend with real-time monitoring and control capabilities.
+
+### 🚀 **Quick Start with Frontend**
+```bash
+# Start complete system (API + Frontend)
+./scripts/start_with_frontend.sh
+
+# Access the dashboard
+# http://localhost:8084
+```
+
+### 🛠️ **Development Mode**
+```bash
+# Start in development mode (hot reload)
+./scripts/start_dev.sh
+
+# Access points:
+# Frontend: http://localhost:3000
+# API: http://localhost:8084
+```
+
+### ✨ **Frontend Features**
+- **🎯 Real-time Dashboard**: Live bot status, portfolio value, strategy performance
+- **⚡ Signal Feed**: Real-time trading signals with filtering and strength indicators
+- **📊 Trade History**: Complete execution history with status tracking
+- **🔧 Bot Control**: Start/stop bot, enable/disable strategies, emergency controls
+- **🌐 WebSocket Integration**: Live updates without page refresh
+- **📱 Responsive Design**: Works on desktop, tablet, and mobile
+
+### 🎨 **Interface Sections**
+- **Bot Status**: Monitor running state, portfolio value, active strategies
+- **Live Signals**: Real-time signal feed with buy/sell indicators
+- **Trade History**: Detailed trade execution log with P&L tracking
+- **Performance**: Strategy-specific analytics and metrics
+- **Settings**: Configuration and control panel
+
 ## 📊 Monitoring
 
 Access the monitoring stack:
+- **SniperBot Dashboard**: http://localhost:8084 (Main Interface)
 - **Grafana Dashboard**: http://localhost:3000 (admin/sniperbot123)
 - **Prometheus Metrics**: http://localhost:9090
 - **QuestDB Console**: http://localhost:9000
@@ -262,10 +345,11 @@ circuit_breaker_threshold = 0.05
 
 ## 📚 Documentation
 
+- [Frontend Integration Guide](docs/frontend-integration.md)
 - [API Documentation](docs/api.md)
 - [Strategy Development Guide](docs/strategies.md)
 - [Deployment Guide](docs/deployment.md)
-- [Troubleshooting](docs/troubleshooting.md)
+- [Configuration Guide](docs/configuration.md)
 
 ## 🤝 Contributing
 

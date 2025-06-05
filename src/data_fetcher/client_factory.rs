@@ -1,4 +1,4 @@
-use crate::config::{Config, SolanaConfig, JupiterConfig, JitoConfig};
+use crate::config::Config;
 use crate::data_fetcher::solana_client::SolanaDataFetcher;
 use crate::data_fetcher::jupiter_client::JupiterClient;
 use crate::execution::JitoExecutor;

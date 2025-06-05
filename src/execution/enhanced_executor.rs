@@ -2,8 +2,7 @@ use crate::execution::{balance_manager::BalanceManager, EnhancedOrderExecutor, J
 use crate::models::{ExecutionResult, Order, OrderStatus, TradingError, TradingResult};
 use async_trait::async_trait;
 use solana_sdk::signature::{Keypair, Signer};
-use std::sync::Arc;
-use tracing::{debug, error, info, warn};
+use tracing::{info, warn};
 
 pub struct SniperBotExecutor {
     jupiter_executor: JupiterExecutor,

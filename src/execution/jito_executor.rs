@@ -14,8 +14,8 @@ use solana_sdk::{
     transaction::VersionedTransaction,
 };
 use std::str::FromStr;
-use std::time::{Duration, Instant};
-use tracing::{debug, error, info, warn};
+use std::time::Instant;
+use tracing::{debug, info, warn};
 use uuid::Uuid;
 
 pub struct JitoExecutor {

@@ -5,11 +5,16 @@ edition = "2021"
 authors = ["SynergiaOS <synergiaos@outlook.com>"]
 description = "REST API server for SniperBot UI and external integrations"
 
+[[bin]]
+name = "api_server"
+path = "src/main.rs"
+
 [dependencies]
 # Web framework
-axum = "0.7.9"
+axum = { version = "0.7.9", features = ["ws"] }
 tower = "0.4.13"
-tower-http = { version = "0.5.2", features = ["cors", "trace"] }
+tower-http = { version = "0.5.2", features = ["cors", "trace", "fs"] }
+futures-util = "0.3"
 
 # Async runtime
 tokio = { version = "1.45", features = ["full"] }
@@ -20,6 +25,7 @@ serde_json = "1.0"
 
 # Logging
 tracing = "0.1"
+tracing-subscriber = "0.3"
 
 # HTTP
 hyper = "1.6"

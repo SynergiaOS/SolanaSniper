@@ -10,7 +10,7 @@ use chrono::Utc;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::{mpsc, RwLock};
-use tokio::time::{interval, sleep};
+use tokio::time::interval;
 use tracing::{info, warn, error, debug, instrument};
 
 /// Live Trading Engine that coordinates WebSocket data, strategies, and execution
@@ -27,8 +27,8 @@ impl LiveTradingEngine {
     /// Create new live trading engine
     pub fn new(config: Config, dry_run: bool) -> TradingResult<Self> {
         // Create channels for communication
-        let (market_event_sender, market_event_receiver) = mpsc::channel::<MarketEvent>(1000);
-        let (signal_sender, signal_receiver) = mpsc::channel::<StrategySignal>(100);
+        let (market_event_sender, _market_event_receiver) = mpsc::channel::<MarketEvent>(1000);
+        let (signal_sender, _signal_receiver) = mpsc::channel::<StrategySignal>(100);
 
         // Create WebSocket manager
         let websocket_manager = RealtimeWebSocketManager::new(
@@ -42,6 +42,7 @@ impl LiveTradingEngine {
         // Initialize portfolio
         let portfolio = Arc::new(RwLock::new(Portfolio {
             total_value: config.trading.initial_balance,
+            total_value_usd: Some(config.trading.initial_balance),
             available_balance: config.trading.initial_balance,
             unrealized_pnl: 0.0,
             realized_pnl: 0.0,
@@ -251,10 +252,49 @@ impl LiveTradingEngine {
         info!("⚡ Signal processor stopped");
     }
 
+    /// Process a strategy signal (called from main loop)
+    pub async fn process_signal(&self, signal: StrategySignal) -> TradingResult<()> {
+        info!("🎯 Processing signal: {} {} {} @ ${:.6} (strength: {:.2})",
+              signal.strategy, signal.signal_type, signal.symbol, signal.price, signal.strength);
+
+        if self.dry_run {
+            info!("🔍 DRY RUN - Signal would be executed: {:?}", signal.metadata);
+            return Ok(());
+        }
+
+        // TODO: Integrate with actual execution engine
+        info!("💡 Signal execution not yet implemented");
+        Ok(())
+    }
+
+    /// Get trading engine status
+    pub async fn get_status(&self) -> EngineStatus {
+        EngineStatus {
+            is_running: self.is_running.load(std::sync::atomic::Ordering::SeqCst),
+            dry_run: self.dry_run,
+            portfolio_value: {
+                let portfolio = self.portfolio.read().await;
+                portfolio.total_value
+            },
+            active_strategies: 4, // Placeholder
+        }
+    }
+}
+
+/// Trading engine status information
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct EngineStatus {
+    pub is_running: bool,
+    pub dry_run: bool,
+    pub portfolio_value: f64,
+    pub active_strategies: u32,
+}
+
+impl LiveTradingEngine {
     /// Create mock strategy context for testing
     async fn create_mock_strategy_context(portfolio: &Arc<RwLock<Portfolio>>) -> StrategyContext {
         let portfolio_state = portfolio.read().await.clone();
-        
+
         // Create mock market data
         let market_data = MarketData {
             symbol: "SOL/USDC".to_string(),
@@ -265,7 +305,7 @@ impl LiveTradingEngine {
             timestamp: Utc::now(),
             source: DataSource::Solana,
         };
-        
+
         let aggregated_data = AggregatedMarketData {
             primary_data: market_data,
             secondary_data: vec![],
@@ -273,7 +313,7 @@ impl LiveTradingEngine {
             confidence_score: 0.8,
             latency_ms: 100,
         };
-        
+
         let market_conditions = MarketConditions {
             volatility: 0.15,
             volume_trend: VolumeTrend::Increasing,
@@ -282,7 +322,7 @@ impl LiveTradingEngine {
             market_cap: Some(1000000.0),
             age_hours: Some(12.0),
         };
-        
+
         StrategyContext::new(aggregated_data, portfolio_state, market_conditions)
     }
 }

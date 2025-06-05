@@ -6,11 +6,14 @@ use axum::{
     routing::{get, post},
     Router,
 };
-use tower_http::{cors::CorsLayer, trace::TraceLayer};
+use tower_http::{cors::CorsLayer, trace::TraceLayer, services::ServeDir};
 use tracing::info;
+use models::AppState;
 
 pub async fn create_app() -> Router {
     info!("🌐 Creating SniperBot UI API server");
+
+    let state = AppState::new();
 
     Router::new()
         .route("/health", get(handlers::health::health_check))
@@ -20,6 +23,32 @@ pub async fn create_app() -> Router {
         .route("/api/v1/orders", post(handlers::orders::create_order))
         .route("/api/v1/strategies", get(handlers::strategies::get_strategies))
         .route("/api/v1/market-data/:symbol", get(handlers::market_data::get_market_data))
+        // KLUCZOWY ENDPOINT dla Reporter z SniperBot core
+        .route("/api/report_event", post(handlers::report_events::receive_report_event))
+        .route("/api/events", get(handlers::report_events::get_all_events))
+        // WebSocket endpoint for real-time updates
+        .route("/ws", get(handlers::websocket::websocket_handler))
+        // Dashboard compatibility endpoints (matching frontend expectations)
+        .route("/api/bot-status", get(handlers::status::get_bot_status))
+        .route("/api/signals", get(handlers::report_events::get_signals))
+        .route("/api/trades", get(handlers::orders::get_orders))
+        // Bot control endpoints
+        .route("/api/bot/start", post(handlers::status::start_bot))
+        .route("/api/bot/stop", post(handlers::status::stop_bot))
+        .route("/api/bot/pause", post(handlers::status::pause_bot))
+        .route("/api/bot/emergency-stop", post(handlers::status::emergency_stop))
+        .route("/api/bot/mode", post(handlers::status::set_mode))
+        // Manual trading
+        .route("/api/trade/manual", post(handlers::orders::manual_trade))
+        // AI endpoints
+        .route("/api/ai/analyze", post(handlers::status::ai_analyze))
+        .route("/api/ai/toggle", post(handlers::status::ai_toggle))
+        // Strategy endpoints
+        .route("/api/strategy/:strategy/toggle", post(handlers::strategies::toggle_strategy))
+        .route("/api/strategy/reset", post(handlers::strategies::reset_strategies))
+        // Serve static frontend files
+        .nest_service("/", ServeDir::new("frontend/dist").fallback(ServeDir::new("frontend/dist/index.html")))
+        .with_state(state)
         .layer(CorsLayer::permissive())
         .layer(TraceLayer::new_for_http())
 }

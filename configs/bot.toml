@@ -1,105 +1,138 @@
+# SniperBot 2.0 Configuration
+# This is the main configuration file for the trading bot
+
 [bot]
-name = "SniperBot"
+name = "SniperBot 2.0"
 version = "0.1.0"
-environment = "dev"
-update_interval_ms = 1000
-max_concurrent_orders = 10
+dry_run = true
+paper_trading = true
+log_level = "info"
+
+[solana]
+# Helius RPC endpoints
+rpc_url = "https://mainnet.helius-rpc.com/?api-key=40a78e4c-bdd0-4338-877a-aa7d56a5f5a0"
+enhanced_rpc_url = "https://api.helius.xyz/v0/addresses"
+commitment = "confirmed"
+timeout_seconds = 30
+
+[jupiter]
+api_url = "https://quote-api.jup.ag/v6"
+swap_url = "https://quote-api.jup.ag/v6/swap"
+price_url = "https://price.jup.ag/v4/price"
+timeout_seconds = 10
+max_retries = 3
+
+[jito]
+api_url = "https://mainnet.block-engine.jito.wtf/api/v1"
+tip_accounts = [
+    "96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5",
+    "HFqU5x63VTqvQss8hp11i4wVV8bD44PvwucfZ2bU7gRe",
+    "Cw8CFyM9FkoMi7K7Crf6HNQqf4uEMzpKw6QNghXLvLkY",
+    "ADaUMid9yfUytqMBgopwjb2DTLSokTSzL1zt6iGPaS49"
+]
+bundle_timeout_seconds = 30
+max_tip_lamports = 50000000  # 0.05 SOL
+
+[exchanges.binance]
+enabled = true
+api_url = "https://api.binance.com"
+websocket_url = "wss://stream.binance.com:9443/ws"
+rate_limit_requests_per_minute = 1200
+
+[exchanges.raydium]
+enabled = true
+api_url = "https://api.raydium.io"
+program_id = "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8"
+
+[exchanges.pumpfun]
+enabled = true
+api_url = "https://pumpportal.fun/api"
+program_id = "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P"
+
+[exchanges.meteora]
+enabled = true
+api_url = "https://dlmm-api.meteora.ag"
+program_id = "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo"
 
 [risk_management]
-global_max_exposure = 10000.0
-max_daily_loss = 1000.0
-max_drawdown = 0.2
-position_sizing_method = "percentage"
-emergency_stop_enabled = true
-circuit_breaker_threshold = 0.05
+max_position_size_usd = 1000.0
+max_daily_loss_usd = 500.0
+max_drawdown_percent = 10.0
+stop_loss_percent = 5.0
+take_profit_percent = 20.0
+max_slippage_bps = 300  # 3%
 
-[database]
-sqlite_path = "data/sniper_bot.db"
-# redis_url = "redis://localhost:6379"
-# questdb_url = "postgresql://admin:quest@localhost:8812/qdb"
-# neo4j_url = "bolt://localhost:7687"
+[risk_management.position_limits]
+max_positions = 5
+max_exposure_per_token_percent = 20.0
+min_liquidity_usd = 10000.0
+
+[strategies.pumpfun_sniping]
+enabled = true
+confidence_threshold = 0.7
+max_market_cap_usd = 1000000.0
+min_volume_24h_usd = 50000.0
+bonding_curve_threshold = 0.8
+
+[strategies.liquidity_sniping]
+enabled = true
+confidence_threshold = 0.6
+min_liquidity_usd = 100000.0
+max_age_hours = 24.0
+min_apr_percent = 50.0
+
+[analytics]
+python_executables_path = "./pyinstaller_executables"
+talib_binary = "talib_analyzer"
+social_scanner_binary = "social_scanner"
+sentiment_analyzer_binary = "sentiment_analyzer"
 
 [logging]
 level = "info"
-file_path = "logs/sniper_bot.log"
+file_path = "./logs/sniperbot.log"
 max_file_size_mb = 100
 max_files = 10
-structured = true
 
-[api]
-host = "127.0.0.1"
-port = 8080
-cors_enabled = true
-auth_enabled = false
-# api_key = "your_api_key_here"
+[monitoring]
+metrics_enabled = true
+metrics_port = 9090
+health_check_port = 8080
 
-# Exchange configurations
-[exchanges.binance]
-name = "Binance"
-api_key = "${BINANCE_API_KEY}"
-api_secret = "${BINANCE_API_SECRET}"
-sandbox = true
-rate_limit_per_second = 10
-enabled = false
-supported_pairs = ["BTCUSDT", "ETHUSDT", "SOLUSDT"]
-
-[exchanges.coinbase]
-name = "Coinbase Pro"
-api_key = "${COINBASE_API_KEY}"
-api_secret = "${COINBASE_API_SECRET}"
-sandbox = true
-rate_limit_per_second = 10
-enabled = false
-supported_pairs = ["BTC-USD", "ETH-USD", "SOL-USD"]
-
-# Solana/Helius configuration
-[exchanges.helius]
-name = "Helius Solana RPC"
-api_key = "40a78e4c-bdd0-4338-877a-aa7d56a5f5a0"
-api_secret = ""
-sandbox = false  # Using devnet
-rate_limit_per_second = 100
+# WebSocket Configuration for Real-Time Data
+[websocket]
 enabled = true
-supported_pairs = ["SOL/USDC", "RAY/SOL", "BONK/SOL"]
+helius_ws_url = "wss://mainnet.helius-rpc.com/?api-key=40a78e4c-bdd0-4338-877a-aa7d56a5f5a0"
+binance_ws_url = "wss://stream.binance.com:9443/ws"
+reconnect_timeout_seconds = 5
+max_retries = 10
+ping_interval_seconds = 30
 
-[exchanges.helius.endpoints]
-rpc_url = "https://devnet.helius-rpc.com/?api-key=40a78e4c-bdd0-4338-877a-aa7d56a5f5a0"
-secure_rpc_url = "https://nicolle-hyxhie-fast-devnet.helius-rpc.com"
-websocket_url = "wss://devnet.helius-rpc.com/?api-key=40a78e4c-bdd0-4338-877a-aa7d56a5f5a0"
-parse_transactions_url = "https://api-devnet.helius-rpc.com/v0/transactions/?api-key=40a78e4c-bdd0-4338-877a-aa7d56a5f5a0"
-parse_history_url = "https://api-devnet.helius-rpc.com/v0/addresses/{address}/transactions/?api-key=40a78e4c-bdd0-4338-877a-aa7d56a5f5a0"
-eclipse_url = "https://eclipse.helius-rpc.com/"
-
-# Strategy configurations
-[[strategies]]
-name = "simple_momentum"
+# WebSocket Subscriptions
+[[websocket.subscriptions]]
+subscription_type = "PriceUpdates"
+symbol = "SOL/USDC"
 enabled = true
-pairs = ["BTCUSDT", "ETHUSDT"]
 
-[strategies.parameters]
-sma_short = 10
-sma_long = 30
-rsi_period = 14
-rsi_oversold = 30
-rsi_overbought = 70
+[[websocket.subscriptions]]
+subscription_type = "NewTokens"
+enabled = true
 
-[strategies.risk_limits]
-max_position_size = 1000.0
-max_daily_loss = 100.0
-stop_loss_percentage = 0.02
-take_profit_percentage = 0.04
+[[websocket.subscriptions]]
+subscription_type = "WhaleAlerts"
+enabled = true
 
-[[strategies]]
-name = "arbitrage"
-enabled = false
-pairs = ["BTCUSDT"]
+[trading]
+initial_balance = 10000.0
+analysis_interval_seconds = 60
+max_concurrent_trades = 5
+default_position_size = 100.0
+enable_live_trading = false
 
-[strategies.parameters]
-min_profit_threshold = 0.001
-max_position_size = 5000.0
-
-[strategies.risk_limits]
-max_position_size = 5000.0
-max_daily_loss = 200.0
-stop_loss_percentage = 0.01
-take_profit_percentage = 0.02
+# AI Decision Engine Configuration
+[ai]
+enabled = true
+api_key = "XbhYfsLJ1kx8XoAjcutmhz6qjxWStf1Y"
+model = "mistral-large-latest"
+temperature = 0.3
+top_p = 0.95
+tool_use_enabled = true

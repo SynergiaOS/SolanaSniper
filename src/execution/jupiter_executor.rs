@@ -12,10 +12,8 @@ use solana_sdk::{
     signature::{Keypair, Signature, Signer},
     transaction::VersionedTransaction,
 };
-use std::str::FromStr;
 use std::time::Instant;
-use tracing::{debug, error, info, warn};
-use uuid::Uuid;
+use tracing::{debug, info, warn};
 
 pub struct JupiterExecutor {
     client: Client,
@@ -424,6 +422,7 @@ impl JupiterExecutor {
 mod tests {
     use super::*;
     use crate::models::{OrderSide, OrderType, TimeInForce};
+    use uuid::Uuid;
 
     #[tokio::test]
     async fn test_jupiter_executor_creation() {

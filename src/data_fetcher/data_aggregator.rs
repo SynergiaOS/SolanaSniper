@@ -1,15 +1,14 @@
 use crate::data_fetcher::{
     binance_client::BinanceClient,
-    jupiter_client::JupiterClient,
     meteora_client::MeteoraClient,
     pumpfun_client::PumpFunClient,
     raydium_client::RaydiumClient,
-    solana_client::SolanaDataFetcher,
     DataFetcher, OrderBook,
 };
-use crate::models::{MarketData, TradingError, TradingResult};
+use crate::models::{MarketData, MarketEvent, TradingError, TradingResult};
 use crate::utils::config::Config;
 use dashmap::DashMap;
+use serde::Serialize;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
@@ -29,7 +28,7 @@ struct CachedMarketData {
     timestamp: Instant,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct AggregatedMarketData {
     pub primary_data: MarketData,
     pub secondary_data: Vec<MarketData>,
@@ -377,6 +376,40 @@ impl DataAggregator {
         let confidence = (1.0 - (avg_deviation * 10.0)).max(0.1).min(1.0);
         
         confidence
+    }
+
+    /// Process market event and update internal state
+    pub async fn process_market_event(&self, event: &MarketEvent) -> TradingResult<()> {
+        match event {
+            MarketEvent::PriceUpdate { symbol, price, .. } => {
+                debug!("📊 Processing price update for {}: ${:.6}", symbol, price);
+                // Update internal price cache or trigger data refresh
+                // For now, just log the event
+            }
+            MarketEvent::LiquidityUpdate { token_a, token_b, .. } => {
+                debug!("💧 Processing liquidity update for {}/{}", token_a, token_b);
+            }
+            MarketEvent::NewTransaction { token_address, .. } => {
+                debug!("🔄 Processing new transaction for {}", token_address);
+            }
+            MarketEvent::ConnectionStatus { source, connected, .. } => {
+                if *connected {
+                    info!("✅ Data source {} connected", source);
+                } else {
+                    warn!("❌ Data source {} disconnected", source);
+                }
+            }
+            MarketEvent::RawMessage { source, .. } => {
+                debug!("📨 Raw message from {}", source);
+            }
+            MarketEvent::NewTokenListing { token_address, symbol, .. } => {
+                info!("🆕 New token listing detected: {} ({:?})", token_address, symbol);
+            }
+            MarketEvent::WhaleAlert { token_address, amount_usd, .. } => {
+                warn!("🐋 Whale alert: ${:.2} movement in {}", amount_usd, token_address);
+            }
+        }
+        Ok(())
     }
 }
 

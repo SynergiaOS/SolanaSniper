@@ -1,4 +1,4 @@
-use crate::models::{DataSource, MarketData, MarketEvent, TransactionType, TradingError, TradingResult};
+use crate::models::{DataSource, MarketData, MarketEvent, TradingError, TradingResult};
 use chrono::Utc;
 use dashmap::DashMap;
 use serde::{Deserialize, Serialize};
@@ -266,7 +266,7 @@ impl WebSocketManager {
                 }
             }
             DataSource::Solana => {
-                let ws_msg: SolanaWebSocketMessage = serde_json::from_str(message)
+                let _ws_msg: SolanaWebSocketMessage = serde_json::from_str(message)
                     .map_err(|e| TradingError::DataError(format!("Failed to parse Solana message: {}", e)))?;
 
                 Ok(MarketEvent::RawMessage {

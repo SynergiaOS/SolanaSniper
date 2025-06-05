@@ -465,8 +465,8 @@ impl EnhancedStrategy for PumpFunSnipingStrategy {
     }
 
     /// Process real-time market events for PumpFun sniping
-    #[instrument(skip(self, context), fields(strategy = %self.name))]
-    async fn on_market_event(&self, event: &MarketEvent, context: &StrategyContext) -> TradingResult<Option<StrategySignal>> {
+    #[instrument(skip(self, _context), fields(strategy = %self.name))]
+    async fn on_market_event(&self, event: &MarketEvent, _context: &StrategyContext) -> TradingResult<Option<StrategySignal>> {
         if !self.config.enabled {
             return Ok(None);
         }
@@ -518,7 +518,7 @@ impl EnhancedStrategy for PumpFunSnipingStrategy {
             MarketEvent::LiquidityUpdate {
                 pool_address,
                 token_a,
-                token_b,
+                token_b: _,
                 liquidity_a,
                 liquidity_b,
                 price,

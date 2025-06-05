@@ -1,0 +1,123 @@
+/* SniperBot Trading Color System */
+
+:root {
+  /* Primary Trading Colors */
+  --trading-bull-primary: #00C896;    /* Professional bull green */
+  --trading-bull-light: #E6F7F3;     /* Light bull background */
+  --trading-bull-dark: #00A67E;      /* Dark bull accent */
+  
+  --trading-bear-primary: #FF4757;    /* Professional bear red */
+  --trading-bear-light: #FFF1F2;     /* Light bear background */
+  --trading-bear-dark: #E73C4E;      /* Dark bear accent */
+  
+  /* Neutral Trading Colors */
+  --trading-neutral: #6B7280;        /* Neutral gray */
+  --trading-neutral-light: #F9FAFB;  /* Light neutral background */
+  --trading-neutral-dark: #374151;   /* Dark neutral text */
+  
+  /* Status Colors */
+  --status-active: #10B981;          /* Active/Running status */
+  --status-inactive: #6B7280;        /* Inactive/Stopped status */
+  --status-warning: #F59E0B;         /* Warning status */
+  --status-error: #EF4444;           /* Error status */
+  --status-info: #3B82F6;            /* Info status */
+  
+  /* Background Colors */
+  --bg-primary: #FFFFFF;             /* Primary background */
+  --bg-secondary: #F8FAFC;           /* Secondary background */
+  --bg-tertiary: #F1F5F9;            /* Tertiary background */
+  --bg-dark: #0F172A;                /* Dark background */
+  --bg-dark-secondary: #1E293B;      /* Dark secondary background */
+  
+  /* Border Colors */
+  --border-light: #E2E8F0;           /* Light border */
+  --border-medium: #CBD5E1;          /* Medium border */
+  --border-dark: #475569;            /* Dark border */
+  
+  /* Text Colors */
+  --text-primary: #0F172A;           /* Primary text */
+  --text-secondary: #475569;         /* Secondary text */
+  --text-tertiary: #64748B;          /* Tertiary text */
+  --text-light: #94A3B8;             /* Light text */
+  --text-white: #FFFFFF;             /* White text */
+  
+  /* Accent Colors */
+  --accent-blue: #2563EB;            /* Professional blue */
+  --accent-blue-light: #EFF6FF;      /* Light blue background */
+  --accent-purple: #7C3AED;          /* Professional purple */
+  --accent-purple-light: #F3F4F6;    /* Light purple background */
+  
+  /* Signal Strength Colors */
+  --signal-strong: #059669;          /* Strong signal (80-100%) */
+  --signal-medium: #D97706;          /* Medium signal (60-79%) */
+  --signal-weak: #DC2626;            /* Weak signal (40-59%) */
+  --signal-very-weak: #991B1B;       /* Very weak signal (0-39%) */
+  
+  /* Performance Colors */
+  --profit-color: #10B981;           /* Profit green */
+  --loss-color: #EF4444;             /* Loss red */
+  --breakeven-color: #6B7280;        /* Breakeven gray */
+  
+  /* Shadow Colors */
+  --shadow-light: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  --shadow-medium: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-large: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Dark theme variables */
+[data-theme="dark"] {
+  --bg-primary: #0F172A;
+  --bg-secondary: #1E293B;
+  --bg-tertiary: #334155;
+  --text-primary: #F8FAFC;
+  --text-secondary: #CBD5E1;
+  --text-tertiary: #94A3B8;
+  --border-light: #334155;
+  --border-medium: #475569;
+}
+
+/* Utility classes for trading colors */
+.trading-bull {
+  color: var(--trading-bull-primary);
+}
+
+.trading-bear {
+  color: var(--trading-bear-primary);
+}
+
+.bg-trading-bull {
+  background-color: var(--trading-bull-light);
+}
+
+.bg-trading-bear {
+  background-color: var(--trading-bear-light);
+}
+
+.border-trading-bull {
+  border-color: var(--trading-bull-primary);
+}
+
+.border-trading-bear {
+  border-color: var(--trading-bear-primary);
+}
+
+/* Signal strength indicators */
+.signal-strength-strong {
+  background-color: var(--signal-strong);
+  color: white;
+}
+
+.signal-strength-medium {
+  background-color: var(--signal-medium);
+  color: white;
+}
+
+.signal-strength-weak {
+  background-color: var(--signal-weak);
+  color: white;
+}
+
+.signal-strength-very-weak {
+  background-color: var(--signal-very-weak);
+  color: white;
+}

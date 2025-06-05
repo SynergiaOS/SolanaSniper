@@ -4,17 +4,17 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use serde_json;
 use std::collections::HashMap;
-use tracing::{info, debug, warn, instrument};
+use tracing::debug;
 
 /// Enhanced strategy context with aggregated data and portfolio state
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct StrategyContext {
     pub aggregated_data: AggregatedMarketData,
     pub portfolio: Portfolio,
     pub market_conditions: MarketConditions,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct MarketConditions {
     pub volatility: f64,
     pub volume_trend: VolumeTrend,
@@ -70,7 +70,7 @@ pub trait EnhancedStrategy: Send + Sync {
 
     /// Process real-time market event and potentially generate trading signal
     /// This method is called for every MarketEvent received via WebSocket
-    async fn on_market_event(&self, event: &MarketEvent, context: &StrategyContext) -> TradingResult<Option<StrategySignal>> {
+    async fn on_market_event(&self, event: &MarketEvent, _context: &StrategyContext) -> TradingResult<Option<StrategySignal>> {
         // Default implementation - strategies can override this
         // For now, we'll ignore events and return None
         debug!("Strategy {} received market event: {:?}", self.get_name(), event);
@@ -100,6 +100,9 @@ pub enum StrategyType {
     MeanReversion,
     Liquidity,
     Graduation,
+    MeteoraDLMM,
+    LiquidityProvision,
+    VolumeSpike,
 }
 
 /// Strategy configuration for different types

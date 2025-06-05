@@ -18,6 +18,7 @@ pub struct Config {
     pub monitoring: MonitoringConfig,
     pub websocket: WebSocketConfig,
     pub trading: TradingConfig,
+    pub ai: AIConfig,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -136,6 +137,16 @@ pub struct TradingConfig {
     pub max_concurrent_trades: u32,
     pub default_position_size: f64,
     pub enable_live_trading: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AIConfig {
+    pub enabled: bool,
+    pub api_key: String,
+    pub model: String,
+    pub temperature: f64,
+    pub top_p: f64,
+    pub tool_use_enabled: bool,
 }
 
 impl Config {
@@ -331,6 +342,14 @@ impl Default for Config {
                 max_concurrent_trades: 5,
                 default_position_size: 100.0,
                 enable_live_trading: false,
+            },
+            ai: AIConfig {
+                enabled: true,
+                api_key: std::env::var("MISTRAL_API_KEY").unwrap_or_else(|_| "test_key".to_string()),
+                model: "mistral-large-latest".to_string(),
+                temperature: 0.3,
+                top_p: 0.95,
+                tool_use_enabled: true,
             },
         }
     }
