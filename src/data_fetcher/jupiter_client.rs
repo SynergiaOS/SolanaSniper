@@ -116,16 +116,16 @@ pub struct JupiterPriceData {
 }
 
 impl JupiterClient {
-    pub fn new(config: JupiterConfig) -> TradingResult<Self> {
-        let http_client = HttpClient::new(config.api_url.clone())
+    pub fn new(config: &JupiterConfig) -> TradingResult<Self> {
+        let http_client = HttpClient::new(config.api_base_url.clone())
             .map_err(|e| TradingError::NetworkError(e.to_string()))?;
 
         info!("✅ Jupiter client initialized");
-        debug!("Jupiter API base URL: {}", config.api_url);
-        debug!("Max retries: {}", config.max_retries);
+        debug!("Jupiter API base URL: {}", config.api_base_url);
+        debug!("Timeout: {} seconds", config.timeout_seconds);
 
         Ok(Self {
-            config,
+            config: config.clone(),
             http_client,
         })
     }

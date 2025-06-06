@@ -36,7 +36,7 @@ tracing-appender = "0.2"
 
 # Database
 rusqlite = { version = "0.32", features = ["bundled"] }
-redis = { version = "0.26", features = ["tokio-comp"] }  # DragonflyDB is Redis-compatible
+redis = { version = "0.25", features = ["tokio-comp"] }  # Local DragonflyDB (no TLS needed)
 deadpool-redis = "0.14"  # Connection pooling for DragonflyDB
 bb8-redis = "0.15"  # Alternative connection pool
 

@@ -53,6 +53,7 @@ impl DbConfig {
 }
 
 /// Database client with connection pooling
+#[derive(Clone)]
 pub struct DbClient {
     pool: Pool,
     config: DbConfig,
@@ -187,7 +188,20 @@ impl DbClient {
         Ok(length)
     }
 
-    /// Get items from list (range)
+    /// Get items from list (range) - raw strings
+    pub async fn list_range_raw(&self, key: &str, start: i64, stop: i64) -> TradingResult<Vec<String>> {
+        let mut conn = self.get_connection().await?;
+
+        let items: Vec<String> = conn
+            .lrange(key, start as isize, stop as isize)
+            .await
+            .map_err(|e| format!("Redis LRANGE failed: {}", e))?;
+
+        debug!("📋 Got {} raw items from list: {}", items.len(), key);
+        Ok(items)
+    }
+
+    /// Get items from list (range) - deserialize JSON
     pub async fn list_range<T: for<'de> Deserialize<'de>>(&self, key: &str, start: i64, stop: i64) -> TradingResult<Vec<T>> {
         let mut conn = self.get_connection().await?;
 

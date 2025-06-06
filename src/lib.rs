@@ -22,7 +22,7 @@ pub mod strategy;
 pub mod utils;
 
 // Re-export commonly used types
-pub use config::Config;
+pub use config::AppConfig;
 pub use models::{TradingResult, TradingError};
 
 // Re-export main components

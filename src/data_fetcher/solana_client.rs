@@ -46,7 +46,7 @@ struct HeliusInstruction {
 }
 
 impl SolanaDataFetcher {
-    pub fn new(config: SolanaConfig, helius_api_key: String) -> TradingResult<Self> {
+    pub fn new(config: &SolanaConfig, helius_api_key: String) -> TradingResult<Self> {
         // Get the actual RPC URL with API key substituted
         let rpc_url = config.rpc_url.replace("${HELIUS_API_KEY}", &helius_api_key);
 
@@ -55,15 +55,15 @@ impl SolanaDataFetcher {
         let http_client = HttpClient::new(rpc_url.clone())
             .map_err(|e| TradingError::NetworkError(e.to_string()))?;
 
-        let helius_api_client = HttpClient::new(config.enhanced_rpc_url.clone())
+        let helius_api_client = HttpClient::new(config.rpc_url.clone())
             .map_err(|e| TradingError::NetworkError(e.to_string()))?;
 
         info!("✅ Solana Data Fetcher initialized with Helius RPC");
         debug!("RPC URL: {}", rpc_url);
-        debug!("Enhanced API URL: {}", config.enhanced_rpc_url);
+        debug!("Solana RPC URL: {}", config.rpc_url);
 
         Ok(Self {
-            config,
+            config: config.clone(),
             rpc_client,
             http_client,
             helius_api_client,

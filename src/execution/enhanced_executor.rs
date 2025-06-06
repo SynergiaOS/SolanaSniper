@@ -35,12 +35,12 @@ impl SniperBotExecutor {
 
         // TODO: Create a dummy jito_executor for now
         let dummy_jito_config = crate::config::JitoConfig {
-            api_url: "https://mainnet.block-engine.jito.wtf/api/v1".to_string(),
-            tip_accounts: vec!["96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5".to_string()],
+            block_engine_url: "https://mainnet.block-engine.jito.wtf".to_string(),
+            tip_lamports: 10000,
+            enabled: true,
             bundle_timeout_seconds: 30,
-            max_tip_lamports: 50_000_000,
         };
-        let jito_executor = JitoExecutor::new(dummy_jito_config, rpc_url)?;
+        let jito_executor = JitoExecutor::new(&dummy_jito_config, rpc_url)?;
 
         Ok(Self {
             jupiter_executor,
@@ -316,12 +316,12 @@ impl ExecutorFactory {
         wallet_keypair: Keypair,
     ) -> TradingResult<JitoExecutor> {
         let dummy_jito_config = crate::config::JitoConfig {
-            api_url: "https://mainnet.block-engine.jito.wtf/api/v1".to_string(),
-            tip_accounts: vec!["96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5".to_string()],
+            block_engine_url: "https://mainnet.block-engine.jito.wtf".to_string(),
+            tip_lamports: 10000,
+            enabled: true,
             bundle_timeout_seconds: 30,
-            max_tip_lamports: 50_000_000,
         };
-        let mut executor = JitoExecutor::new(dummy_jito_config, rpc_url)?;
+        let mut executor = JitoExecutor::new(&dummy_jito_config, rpc_url)?;
         executor.set_wallet_keypair(wallet_keypair);
         Ok(executor)
     }

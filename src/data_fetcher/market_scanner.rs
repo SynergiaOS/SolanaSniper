@@ -1,4 +1,4 @@
-use crate::config::Config;
+use crate::config::AppConfig;
 use crate::data_fetcher::{
     pumpfun_client::PumpFunClient,
     raydium_client::RaydiumClient,
@@ -16,7 +16,7 @@ use chrono::{DateTime, Utc};
 /// Market Scanner for actively discovering trading opportunities
 /// Scans multiple DEXs and sources for tokens meeting strategy criteria
 pub struct MarketScanner {
-    config: Config,
+    config: AppConfig,
     pumpfun_client: Arc<PumpFunClient>,
     raydium_client: Arc<RaydiumClient>,
     meteora_client: Arc<MeteoraClient>,
@@ -68,7 +68,7 @@ pub struct ScanCriteria {
 impl MarketScanner {
     /// Create new market scanner
     pub fn new(
-        config: Config,
+        config: AppConfig,
         pumpfun_client: Arc<PumpFunClient>,
         raydium_client: Arc<RaydiumClient>,
         meteora_client: Arc<MeteoraClient>,

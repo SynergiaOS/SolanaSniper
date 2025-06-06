@@ -64,7 +64,7 @@ struct JitoTransactionStatus {
 }
 
 impl JitoExecutor {
-    pub fn new(config: JitoConfig, rpc_url: &str) -> TradingResult<Self> {
+    pub fn new(config: &JitoConfig, rpc_url: &str) -> TradingResult<Self> {
         let client = Client::new();
         let rpc_client = RpcClient::new_with_commitment(
             rpc_url.to_string(),
@@ -72,7 +72,8 @@ impl JitoExecutor {
         );
 
         // Parse tip accounts from config
-        let tip_accounts: Result<Vec<Pubkey>, _> = config.tip_accounts
+        // Use default tip account for now - TODO: make this configurable
+        let tip_accounts: Result<Vec<Pubkey>, _> = vec!["96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5"]
             .iter()
             .map(|addr| Pubkey::from_str(addr))
             .collect();
@@ -81,11 +82,11 @@ impl JitoExecutor {
             .map_err(|e| TradingError::InvalidOrder(format!("Invalid tip account: {}", e)))?;
 
         info!("✅ Jito Executor initialized");
-        debug!("Jito API URL: {}", config.api_url);
+        debug!("Jito Block Engine URL: {}", config.block_engine_url);
         debug!("Tip accounts: {} configured", tip_accounts.len());
 
         Ok(Self {
-            config,
+            config: config.clone(),
             client,
             rpc_client,
             tip_accounts,
@@ -198,7 +199,7 @@ impl JitoExecutor {
         debug!("Submitting bundle to Jito: {} transactions", transactions.len());
 
         let response = self.client
-            .post(&format!("{}/bundles", self.config.api_url))
+            .post(&format!("{}/api/v1/bundles", self.config.block_engine_url))
             .json(&request)
             .send()
             .await
@@ -275,7 +276,7 @@ impl JitoExecutor {
         };
 
         let response = self.client
-            .post(&format!("{}/bundles", self.config.api_url))
+            .post(&format!("{}/api/v1/bundles", self.config.block_engine_url))
             .json(&request)
             .send()
             .await

@@ -297,6 +297,21 @@ impl DbKeys {
 
     /// All active positions list: all_active_positions
     pub const ALL_ACTIVE_POSITIONS: &'static str = "all_active_positions";
+
+    /// Trading decisions queue: trading_decisions_queue
+    pub const TRADING_DECISIONS_QUEUE: &'static str = "trading_decisions_queue";
+
+    /// Bot statistics: bot_stats
+    pub const BOT_STATS: &'static str = "bot_stats";
+
+    /// Configuration cache: config_cache
+    pub const CONFIG_CACHE: &'static str = "config_cache";
+
+    /// Pipeline statistics: pipeline_stats
+    pub const PIPELINE_STATS: &'static str = "pipeline_stats";
+
+    /// Health check status: health_status
+    pub const HEALTH_STATUS: &'static str = "health_status";
 }
 
 impl RawOpportunity {

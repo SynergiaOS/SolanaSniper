@@ -1,4 +1,4 @@
-use crate::config::Config;
+use crate::config::AppConfig;
 use crate::data_fetcher::realtime_websocket_manager::RealtimeWebSocketManager;
 use crate::data_fetcher::data_aggregator::AggregatedMarketData;
 use crate::models::{MarketEvent, StrategySignal, Portfolio, TradingResult, TradingError, MarketData, DataSource};
@@ -15,7 +15,7 @@ use tracing::{info, warn, error, debug, instrument};
 
 /// Live Trading Engine that coordinates WebSocket data, strategies, and execution
 pub struct LiveTradingEngine {
-    config: Config,
+    config: AppConfig,
     websocket_manager: RealtimeWebSocketManager,
     strategy_manager: StrategyManager,
     portfolio: Arc<RwLock<Portfolio>>,
@@ -25,7 +25,7 @@ pub struct LiveTradingEngine {
 
 impl LiveTradingEngine {
     /// Create new live trading engine
-    pub fn new(config: Config, dry_run: bool) -> TradingResult<Self> {
+    pub fn new(config: AppConfig, dry_run: bool) -> TradingResult<Self> {
         // Create channels for communication
         let (market_event_sender, _market_event_receiver) = mpsc::channel::<MarketEvent>(1000);
         let (signal_sender, _signal_receiver) = mpsc::channel::<StrategySignal>(100);
@@ -333,14 +333,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_live_trading_engine_creation() {
-        let config = Config::default();
+        let config = AppConfig::default();
         let engine = LiveTradingEngine::new(config, true);
         assert!(engine.is_ok());
     }
 
     #[tokio::test]
     async fn test_strategy_initialization() {
-        let config = Config::default();
+        let config = AppConfig::default();
         let engine = LiveTradingEngine::new(config, true).unwrap();
         
         // Test that we can initialize strategies
