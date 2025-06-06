@@ -185,6 +185,7 @@ impl AISignalProcessor {
                 action: signal.signal_type.to_string(),
                 confidence: signal.strength,
                 rationale: "AI disabled - using strategy signal directly".to_string(),
+                risk_score: 0.5, // Default risk score when AI is disabled
                 target_price: None,
                 stop_loss_price: None,
                 strategy_parameters: std::collections::HashMap::new(),
@@ -210,6 +211,7 @@ impl AISignalProcessor {
                 action: "HOLD".to_string(),
                 confidence: 0.5,
                 rationale: "AI analysis failed - conservative approach".to_string(),
+                risk_score: 0.7, // Higher risk score when AI fails
                 target_price: None,
                 stop_loss_price: None,
                 strategy_parameters: std::collections::HashMap::new(),
@@ -247,6 +249,9 @@ impl AISignalProcessor {
             risk_score: 0.5,
             overall_confidence: signal.strength,
             signals: vec![],
+            // NEW: Textual intelligence fields
+            textual_data: None, // Will be populated by TextualDataFetcher
+            news_impact_score: None, // Will be calculated from textual data
         }
     }
 

@@ -247,9 +247,10 @@ pub struct AIEnhancedSignal {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AIRecommendation {
-    pub action: String, // "BUY", "SELL", "HOLD", "NO_ACTION"
+    pub action: String, // "BUY", "SELL", "HOLD", "NO_ACTION", "REJECT"
     pub confidence: f64, // 0.0 - 1.0
     pub rationale: String,
+    pub risk_score: f64, // 0.0 - 1.0 (AI-assessed risk level)
     pub target_price: Option<f64>,
     pub stop_loss_price: Option<f64>,
     pub strategy_parameters: std::collections::HashMap<String, String>,
@@ -344,6 +345,12 @@ pub enum TradingError {
 }
 
 pub type TradingResult<T> = Result<T, TradingError>;
+
+impl From<String> for TradingError {
+    fn from(msg: String) -> Self {
+        TradingError::DataError(msg)
+    }
+}
 
 // Balance Management structures
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -539,6 +546,62 @@ pub struct AggregatedAnalytics {
     pub risk_score: f64,
     pub overall_confidence: f64,
     pub signals: Vec<AnalyticsResult>,
+    // NEW: Textual intelligence from Crawl4AI
+    pub textual_data: Option<TextualData>,
+    pub news_impact_score: Option<f64>,
+}
+
+// Crawl4AI Integration Structures
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TextualData {
+    pub token_symbol: String,
+    pub timestamp: i64,
+    pub data_type: String,
+    pub sources: Vec<TextualSource>,
+    pub aggregated_sentiment: SentimentSummary,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TextualSource {
+    pub url: String,
+    pub title: String,
+    pub content: String,
+    pub sentiment_score: f64,
+    pub keywords: Vec<String>,
+    pub source_type: String,
+    pub source_name: String,
+    pub credibility_score: f64,
+    pub timestamp: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SentimentSummary {
+    pub overall_score: f64,
+    pub positive_mentions: u32,
+    pub negative_mentions: u32,
+    pub neutral_mentions: u32,
+    pub trending_keywords: Vec<String>,
+}
+
+// Crawl4AI Request/Response structures
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Crawl4AIRequest {
+    pub token_symbol: String,
+    pub token_address: Option<String>,
+    pub data_types: Vec<String>,
+    pub time_range_hours: u32,
+    pub max_results: u32,
+    pub sentiment_analysis: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Crawl4AIResponse {
+    pub status: String,
+    pub data: Option<TextualData>,
+    pub error_message: Option<String>,
+    pub execution_time_ms: u64,
+    pub sources_scraped: u32,
+    pub total_items: u32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -561,3 +624,11 @@ pub struct PortfolioState {
     pub max_drawdown: f64,
     pub risk_exposure: f64,
 }
+
+// Persistent state models for DragonflyDB
+pub mod persistent_state;
+pub use persistent_state::*;
+
+// Python compatibility models
+pub mod python_compat;
+pub use python_compat::*;

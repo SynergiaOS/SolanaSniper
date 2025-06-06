@@ -1,0 +1,51 @@
+# 🕸️ Crawl4AI Service Dependencies
+# Core scraping and AI-ready data extraction
+
+# HTML parsing and processing
+beautifulsoup4>=4.12.0
+lxml>=4.9.0
+html5lib>=1.1
+
+# HTTP clients
+requests>=2.31.0
+httpx>=0.25.0
+aiohttp>=3.9.0
+
+# Sentiment analysis (lightweight)
+vaderSentiment>=3.3.0
+
+# Data processing (minimal)
+# pandas>=2.0.0  # Disabled for PyInstaller
+# numpy>=1.24.0  # Disabled for PyInstaller
+
+# Date/time handling
+python-dateutil>=2.8.0
+pytz>=2023.3
+
+# Text processing
+regex>=2023.10.0
+unidecode>=1.3.0
+
+# Async utilities
+asyncio-throttle>=1.0.0
+
+# Logging and monitoring
+structlog>=23.2.0
+
+# Configuration
+pydantic>=2.5.0
+
+# PyInstaller for building executable
+pyinstaller>=6.0.0
+
+# Optional: Browser automation (disabled for PyInstaller)
+# playwright>=1.40.0
+# selenium>=4.15.0
+
+# Optional: Proxy support (disabled for PyInstaller)
+# requests[socks]>=2.31.0
+
+# Optional: Advanced text processing (disabled for PyInstaller)
+# spacy>=3.7.0
+# transformers>=4.35.0
+# crawl4ai>=0.3.0  # Disabled for PyInstaller

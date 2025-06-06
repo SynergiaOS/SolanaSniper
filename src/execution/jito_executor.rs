@@ -118,12 +118,12 @@ impl JitoExecutor {
         all_transactions.extend(transactions);
 
         // Serialize transactions to base64
-        let serialized_transactions: Result<Vec<String>, _> = all_transactions
+        let serialized_transactions: Result<Vec<String>, TradingError> = all_transactions
             .iter()
             .map(|tx| {
                 let serialized = bincode::serialize(tx)
                     .map_err(|e| TradingError::DataError(format!("Failed to serialize transaction: {}", e)))?;
-                Ok(base64::engine::general_purpose::STANDARD.encode(serialized))
+                Ok::<String, TradingError>(base64::engine::general_purpose::STANDARD.encode(serialized))
             })
             .collect();
 

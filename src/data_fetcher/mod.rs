@@ -10,6 +10,8 @@ pub mod data_aggregator;
 pub mod market_scanner;
 pub mod websocket_manager;
 pub mod realtime_websocket_manager;
+pub mod soul_meteor_scanner;
+pub mod textual_data_fetcher;
 
 use crate::models::{MarketData, TradingResult};
 use async_trait::async_trait;

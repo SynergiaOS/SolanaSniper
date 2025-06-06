@@ -13,18 +13,20 @@
 SniperBot 2.0 features a cutting-edge technology stack that sets it apart from all other trading bots:
 
 ### 🎯 **Core Technologies:**
-- **🧠 Graphiti Knowledge Graph** - Temporal trading relationships and AI-powered analysis
+- **🧠 Hub-and-Spoke Architecture** - Persistent state management with DragonflyDB brain
 - **🐉 DragonflyDB** - Ultra-fast cache (25x faster than Redis, 80% cost savings)
 - **🤖 AI Decision Engine** - Mistral AI integration for intelligent trading decisions
-- **⚡ Real-time WebSocket** - Helius + Binance feeds for instant market data
+- **🐍 Python-Rust Bridge** - Seamless integration with PyInstaller executables
+- **⚡ Real-time Data Pipeline** - Soul Meteor Scanner + Crawl4AI validation
 - **🦀 Rust Core** - High-performance, memory-safe trading engine
 
 ### 🏆 **Competitive Advantages:**
-1. **Temporal Knowledge Graph** - Understands market patterns over time
-2. **Ultra-Performance Caching** - Sub-millisecond data access
-3. **AI-Powered Decisions** - Graph-enhanced machine learning
-4. **Real-time Relationship Discovery** - Finds hidden market correlations
-5. **Enterprise-Grade Scalability** - Built for high-frequency trading
+1. **Hub-and-Spoke Architecture** - Persistent state management with enterprise scalability
+2. **Ultra-Performance Caching** - DragonflyDB with sub-millisecond data access
+3. **AI-Powered Decisions** - Mistral AI integration with real-time analysis
+4. **Python-Rust Bridge** - Seamless integration between high-level AI and low-level execution
+5. **Real-time Data Pipeline** - Soul Meteor Scanner + Crawl4AI validation pipeline
+6. **Persistent Intelligence** - Bot remembers everything between restarts
 
 ## 🚀 Features
 
@@ -63,27 +65,43 @@ SniperBot 2.0 features a cutting-edge technology stack that sets it apart from a
 - **🚨 Circuit Breakers**: Emergency stop and exposure limits
 - **📊 Portfolio Monitoring**: Real-time P&L and drawdown tracking
 
+## 🎉 **Phase 5 Achievements - The Persistent Brain**
+
+### ✅ **Hub-and-Spoke Architecture - COMPLETED!**
+- **🧠 DragonflyDB Brain** - Persistent state management with connection pooling
+- **🐍 Python-Rust Bridge** - Seamless data translation with compatibility layer
+- **📊 Live Production Data** - 40+ hot opportunities with real-time market intelligence
+- **🔄 Continuous Operation** - Bot remembers everything between restarts
+- **⚡ Sub-millisecond Access** - Ultra-fast data retrieval and caching
+
+### 🚀 **Production-Ready Components:**
+- **Soul Meteor Scanner** → DragonflyDB (Producer)
+- **Pipeline Controller** → DragonflyDB (Processor)
+- **Trading Executor** → DragonflyDB (Consumer)
+- **Position Manager** → DragonflyDB (Monitor)
+
 ## 🏗️ Architecture
 
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Data Sources  │    │   Rust Core     │    │   AI/ML Layer   │
-│                 │    │                 │    │                 │
-│ • Exchanges     │───▶│ • Data Fetcher  │◀──▶│ • PyInstaller   │
-│ • Blockchain    │    │ • Strategy      │    │   Executables   │
-│ • Social Media  │    │ • Risk Mgmt     │    │ • ContextGem    │
-│ • News Feeds    │    │ • Execution     │    │ • QLib Research │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-                                │
-                                ▼
-                       ┌─────────────────┐
-                       │   Storage       │
-                       │                 │
-                       │ • SQLite        │
-                       │ • Redis         │
-                       │ • QuestDB       │
-                       │ • Neo4j         │
-                       └─────────────────┘
+                    ┌─────────────────────────────────┐
+                    │        DragonflyDB Brain        │
+                    │     (Persistent State Hub)      │
+                    └─────────────┬───────────────────┘
+                                  │
+        ┌─────────────────────────┼─────────────────────────┐
+        │                         │                         │
+┌───────▼────────┐    ┌───────────▼──────────┐    ┌────────▼────────┐
+│ Soul Meteor    │    │   Pipeline           │    │ Trading         │
+│ Scanner        │    │   Controller         │    │ Executor        │
+│ (Python)       │    │   (Rust)             │    │ (Rust)          │
+└────────────────┘    └──────────────────────┘    └─────────────────┘
+        │                         │                         │
+        ▼                         ▼                         ▼
+┌────────────────┐    ┌──────────────────────┐    ┌─────────────────┐
+│ Crawl4AI       │    │ AI Decision Engine   │    │ Position        │
+│ Service        │    │ (Mistral AI)         │    │ Manager         │
+│ (Python)       │    │ (Rust)               │    │ (Rust)          │
+└────────────────┘    └──────────────────────┘    └─────────────────┘
 ```
 
 ## 🛠️ Revolutionary Stack Setup

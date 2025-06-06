@@ -7,12 +7,16 @@
 //! - MEV protection via Jito
 //! - Multi-exchange support
 
+pub mod ai_decision_engine;
+pub mod ai_signal_processor;
 pub mod analytics_aggregator;
 pub mod config;
 pub mod data_fetcher;
+pub mod db_connector;
 pub mod execution;
 pub mod live_trading_engine;
 pub mod models;
+pub mod pipeline;
 pub mod risk_management;
 pub mod strategy;
 pub mod utils;

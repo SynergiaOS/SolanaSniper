@@ -315,6 +315,29 @@ impl Reporter {
         self.send_event(event).await
     }
 
+    /// Report risk management rejection to dashboard
+    pub async fn report_risk_rejection(
+        &self,
+        signal: &StrategySignal,
+        risk_assessment: &crate::risk_management::RiskAssessment
+    ) -> TradingResult<()> {
+        if !self.config.enabled {
+            return Ok(());
+        }
+
+        let event = ReportEvent::RiskAlert {
+            alert_type: "SIGNAL_REJECTION".to_string(),
+            severity: "HIGH".to_string(),
+            message: format!("Signal rejected by AI-enhanced risk management: {}",
+                           risk_assessment.warnings.join(", ")),
+            strategy: Some(signal.strategy.clone()),
+            symbol: Some(signal.symbol.clone()),
+            timestamp: chrono::Utc::now(),
+        };
+
+        self.send_event(event).await
+    }
+
     /// Report a trade execution
     pub async fn report_trade(
         &self,

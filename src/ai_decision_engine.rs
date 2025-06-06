@@ -1,10 +1,7 @@
-use crate::models::{MarketEvent, StrategySignal, TradingResult, TradingError, TokenInfo, AggregatedAnalytics, MarketConditions, PortfolioState, AIRecommendation};
-use crate::strategy::{StrategyContext, StrategyPerformance};
+use crate::models::{TradingError, TokenInfo, AggregatedAnalytics, MarketConditions, PortfolioState, AIRecommendation};
 use mistralai_client::v1::client::Client as MistralClient;
-use serde::{Deserialize, Serialize};
+use mistralai_client::v1::chat::{ChatMessage, ChatMessageRole};
 use std::collections::HashMap;
-use std::time::Duration;
-use tokio::time::timeout;
 use tracing::{debug, error, info, warn, instrument};
 
 // Struct definition moved below
@@ -125,9 +122,10 @@ Portfolio:
 
 Respond with JSON only:
 {{
-  \"action\": \"BUY|SELL|HOLD|NO_ACTION\",
+  \"action\": \"BUY|SELL|HOLD|REJECT\",
   \"confidence\": 0.85,
   \"rationale\": \"Clear explanation\",
+  \"risk_score\": 0.65,
   \"target_price\": 0.001234,
   \"stop_loss_price\": 0.001000,
   \"strategy_parameters\": {{\"position_size\": \"0.1\"}}
@@ -182,23 +180,63 @@ Respond with JSON only:
 
     /// Call Mistral AI API with the given prompt
     async fn call_mistral_api(&self, prompt: &str) -> Result<String, TradingError> {
-        // For now, simulate AI response until we get the correct Mistral API working
-        warn!("🧠 Simulating AI response - Mistral API integration pending");
+        info!("🧠 Calling Mistral AI API for trading recommendation");
+
+        // TODO: Implement real Mistral API call once we fix the client API
+        warn!("🧠 Using simulated AI response - Mistral API integration pending");
 
         // Simulate processing time
-        tokio::time::sleep(Duration::from_millis(500)).await;
+        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
 
         // Generate a realistic AI response based on the prompt
         let response = if prompt.contains("BUY") || prompt.contains("volume spike") {
-            r#"{"action": "BUY", "confidence": 0.75, "rationale": "Strong volume spike detected with positive market momentum. Recommend cautious entry with tight stop-loss.", "target_price": null, "stop_loss_price": null, "strategy_parameters": {}}"#
+            r#"{"action": "BUY", "confidence": 0.75, "rationale": "Strong volume spike detected with positive market momentum. Recommend cautious entry with tight stop-loss.", "risk_score": 0.4, "target_price": null, "stop_loss_price": null, "strategy_parameters": {}}"#
         } else if prompt.contains("SELL") {
-            r#"{"action": "SELL", "confidence": 0.65, "rationale": "Market showing signs of weakness. Recommend taking profits or reducing position size.", "target_price": null, "stop_loss_price": null, "strategy_parameters": {}}"#
+            r#"{"action": "SELL", "confidence": 0.65, "rationale": "Market showing signs of weakness. Recommend taking profits or reducing position size.", "risk_score": 0.3, "target_price": null, "stop_loss_price": null, "strategy_parameters": {}}"#
         } else {
-            r#"{"action": "HOLD", "confidence": 0.60, "rationale": "Market conditions unclear. Recommend waiting for better entry/exit signals.", "target_price": null, "stop_loss_price": null, "strategy_parameters": {}}"#
+            r#"{"action": "HOLD", "confidence": 0.60, "rationale": "Market conditions unclear. Recommend waiting for better entry/exit signals.", "risk_score": 0.5, "target_price": null, "stop_loss_price": null, "strategy_parameters": {}}"#
         };
 
-        debug!("🧠 Generated AI response: {}", response);
+        info!("🧠 Simulated AI response generated: {} chars", response.len());
         Ok(response.to_string())
+
+        /*
+        // Real Mistral API call - TODO: Fix client API
+        let messages = vec![
+            ChatMessage {
+                role: ChatMessageRole::System,
+                content: "You are an expert Solana trading AI. Analyze the provided market data and return a JSON response with trading recommendations. Always respond with valid JSON containing: action (BUY/SELL/HOLD/REJECT), confidence (0.0-1.0), rationale (string), risk_score (0.0-1.0), target_price (optional number), stop_loss_price (optional number), strategy_parameters (object).".to_string(),
+                tool_calls: None,
+            },
+            ChatMessage {
+                role: ChatMessageRole::User,
+                content: prompt.to_string(),
+                tool_calls: None,
+            },
+        ];
+
+        match self.client.chat("mistral-large-latest", messages, None) {
+            Ok(response) => {
+                if let Some(choice) = response.choices.first() {
+                    let content = &choice.message.content;
+                    info!("🧠 Mistral AI response received: {} chars", content.len());
+                    debug!("🧠 AI Response: {}", content);
+                    Ok(content.clone())
+                } else {
+                    error!("🧠 Mistral AI returned empty response");
+                    Err(TradingError::AIError("Empty response from Mistral AI".to_string()))
+                }
+            }
+            Err(e) => {
+                error!("🧠 Mistral AI API call failed: {}", e);
+
+                // Fallback to conservative recommendation on API failure
+                warn!("🧠 Using fallback conservative recommendation due to API failure");
+                let fallback_response = r#"{"action": "HOLD", "confidence": 0.3, "rationale": "AI API unavailable - using conservative fallback recommendation", "risk_score": 0.7, "target_price": null, "stop_loss_price": null, "strategy_parameters": {}}"#;
+                Ok(fallback_response.to_string())
+            }
+        }
+        */
     }
 
     /// Parse AI response JSON into AIRecommendation
@@ -220,6 +258,7 @@ Respond with JSON only:
             action: "HOLD".to_string(),
             confidence: 0.5,
             rationale: "Fallback recommendation - AI temporarily unavailable".to_string(),
+            risk_score: 0.6, // Moderate risk when AI is unavailable
             target_price: Some(token_info.price * 1.05),
             stop_loss_price: Some(token_info.price * 0.95),
             strategy_parameters: HashMap::new(),

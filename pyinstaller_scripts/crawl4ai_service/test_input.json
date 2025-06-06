@@ -1,0 +1,8 @@
+{
+  "token_symbol": "SOL",
+  "token_address": "So11111111111111111111111111111111111111112",
+  "data_types": ["news"],
+  "time_range_hours": 1,
+  "max_results": 3,
+  "sentiment_analysis": true
+}

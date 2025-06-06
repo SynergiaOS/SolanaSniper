@@ -27,7 +27,8 @@ use data_fetcher::{
     data_aggregator::DataAggregator,
     market_scanner::{MarketScanner, PotentialOpportunity},
 };
-use models::{MarketEvent, StrategySignal};
+use models::{MarketEvent, StrategySignal, Portfolio};
+use risk_management::RiskManager;
 use strategy::{
     strategy_manager::StrategyManager,
     arbitrage_strategy::ArbitrageStrategy,
@@ -135,6 +136,7 @@ pub struct SniperBot {
     data_aggregator: Arc<DataAggregator>,
     strategy_manager: Arc<StrategyManager>,
     trading_engine: Arc<LiveTradingEngine>,
+    risk_manager: Arc<RiskManager>,
     dragonfly_manager: Option<Arc<DragonflyManager>>,
     ai_decision_engine: Option<Arc<tokio::sync::Mutex<AIDecisionEngine>>>,
     reporter: Option<Arc<tokio::sync::Mutex<Reporter>>>,
@@ -271,6 +273,20 @@ impl SniperBot {
             None
         };
 
+        // Initialize Risk Manager
+        info!("🛡️ Initializing Risk Manager...");
+        let risk_config = crate::utils::config::RiskManagementConfig {
+            global_max_exposure: config.risk_management.max_position_size_usd,
+            max_daily_loss: config.risk_management.max_daily_loss_usd,
+            max_drawdown: config.risk_management.max_drawdown_percent / 100.0,
+            position_sizing_method: "percentage".to_string(),
+            emergency_stop_enabled: true,
+            circuit_breaker_threshold: 0.15,
+        };
+        let risk_manager = Arc::new(
+            RiskManager::new(risk_config)
+        );
+
         // Initialize Trading Engine
         info!("⚡ Initializing Live Trading Engine...");
         let trading_engine = Arc::new(
@@ -290,6 +306,7 @@ impl SniperBot {
             data_aggregator,
             strategy_manager,
             trading_engine,
+            risk_manager,
             dragonfly_manager,
             ai_decision_engine,
             reporter,
@@ -497,10 +514,61 @@ impl SniperBot {
             return Ok(());
         }
 
-        // Forward signal to trading engine for execution if approved
+        // AI-Enhanced Risk Assessment before execution
         if should_execute {
-            if let Err(e) = self.trading_engine.process_signal(signal).await {
-                error!("❌ Trading engine error: {}", e);
+            info!("🛡️ Performing AI-enhanced risk assessment...");
+
+            // Create mock portfolio for risk assessment
+            let portfolio = Portfolio {
+                total_value: self.config.trading.initial_balance,
+                total_value_usd: Some(self.config.trading.initial_balance),
+                available_balance: self.config.trading.initial_balance * 0.8, // 80% available
+                unrealized_pnl: 0.0,
+                realized_pnl: 0.0,
+                positions: vec![],
+                daily_pnl: 0.0,
+                max_drawdown: 0.0,
+                updated_at: chrono::Utc::now(),
+            };
+
+            // Get AI recommendation if available
+            let ai_recommendation = enhanced_signal.as_ref().map(|enhanced| &enhanced.ai_recommendation);
+
+            // Perform AI-enhanced risk assessment
+            match self.risk_manager.assess_signal_with_ai(&signal, &portfolio, ai_recommendation).await {
+                Ok(risk_assessment) => {
+                    if risk_assessment.approved {
+                        info!("✅ Risk assessment passed - executing signal");
+                        info!("🛡️ Risk score: {:.2}, Suggested size: {:?}",
+                              risk_assessment.risk_score, risk_assessment.suggested_size);
+
+                        // Log risk warnings if any
+                        for warning in &risk_assessment.warnings {
+                            warn!("⚠️ Risk warning: {}", warning);
+                        }
+
+                        // Forward signal to trading engine for execution
+                        if let Err(e) = self.trading_engine.process_signal(signal).await {
+                            error!("❌ Trading engine error: {}", e);
+                        }
+                    } else {
+                        warn!("🚫 Signal execution blocked by risk management");
+                        for warning in &risk_assessment.warnings {
+                            warn!("🚫 Risk block reason: {}", warning);
+                        }
+
+                        // Report risk rejection to dashboard
+                        if let Some(reporter) = &self.reporter {
+                            if let Err(e) = reporter.lock().await.report_risk_rejection(&signal, &risk_assessment).await {
+                                warn!("⚠️ Failed to report risk rejection: {}", e);
+                            }
+                        }
+                    }
+                }
+                Err(e) => {
+                    error!("❌ Risk assessment failed: {}", e);
+                    warn!("🚫 Signal execution blocked due to risk assessment failure");
+                }
             }
         } else {
             info!("🚫 Signal execution blocked by AI analysis");
