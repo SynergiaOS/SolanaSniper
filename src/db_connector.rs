@@ -8,7 +8,7 @@ enabling persistent state management across all bot components.
 
 use deadpool_redis::{Config, Pool, Runtime, redis::AsyncCommands};
 use serde::{Serialize, Deserialize};
-use tracing::{info, error, debug};
+use tracing::{info, error, debug, warn};
 use chrono::{DateTime, Utc};
 use crate::models::TradingResult;
 use std::env;
@@ -273,7 +273,7 @@ impl DbClient {
     /// Get all items from set
     pub async fn set_members<T: for<'de> Deserialize<'de>>(&self, key: &str) -> TradingResult<Vec<T>> {
         let mut conn = self.get_connection().await?;
-        
+
         let members: Vec<String> = conn
             .smembers(key)
             .await
@@ -288,6 +288,19 @@ impl DbClient {
 
         debug!("🔢 Got {} members from set: {}", result.len(), key);
         Ok(result)
+    }
+
+    /// Remove item from list by value
+    pub async fn list_remove(&self, key: &str, value: &str) -> TradingResult<i64> {
+        let mut conn = self.get_connection().await?;
+
+        let removed: i64 = conn
+            .lrem(key, 1, value)
+            .await
+            .map_err(|e| format!("Redis LREM failed: {}", e))?;
+
+        debug!("📋 Removed {} items from list: {}", removed, key);
+        Ok(removed)
     }
 
     /// Get database statistics (simplified)
@@ -323,6 +336,128 @@ impl DbClient {
     /// Get configuration
     pub fn config(&self) -> &DbConfig {
         &self.config
+    }
+
+    // === DASHBOARD-SPECIFIC METHODS ===
+
+    /// Update dashboard statistics
+    pub async fn update_dashboard_stats(&self, stats: &crate::models::persistent_state::DashboardStats) -> TradingResult<()> {
+        let serialized = serde_json::to_string(stats)
+            .map_err(|e| format!("Serialization failed: {}", e))?;
+
+        let mut conn = self.get_connection().await?;
+        let _: () = conn.set_ex("dashboard:stats", &serialized, 3600)
+            .await
+            .map_err(|e| format!("Redis SET failed: {}", e))?;
+
+        Ok(())
+    }
+
+    /// Get dashboard statistics
+    pub async fn get_dashboard_stats(&self) -> TradingResult<Option<crate::models::persistent_state::DashboardStats>> {
+        let mut conn = self.get_connection().await?;
+
+        match conn.get::<_, Option<String>>("dashboard:stats").await {
+            Ok(Some(data)) => {
+                let stats = serde_json::from_str(&data)
+                    .map_err(|e| format!("Deserialization failed: {}", e))?;
+                Ok(Some(stats))
+            },
+            Ok(None) => Ok(None),
+            Err(e) => Err(format!("Redis GET failed: {}", e).into())
+        }
+    }
+
+    /// Add activity event to feed
+    pub async fn add_activity_event(&self, event: &crate::models::persistent_state::ActivityEvent) -> TradingResult<()> {
+        let serialized = serde_json::to_string(event)
+            .map_err(|e| format!("Serialization failed: {}", e))?;
+
+        let mut conn = self.get_connection().await?;
+
+        // Add to activity feed (keep last 100 events)
+        let _: () = conn.lpush("dashboard:activity_feed", &serialized)
+            .await
+            .map_err(|e| format!("Redis LPUSH failed: {}", e))?;
+
+        // Trim to keep only last 100 events
+        let _: () = conn.ltrim("dashboard:activity_feed", 0, 99)
+            .await
+            .map_err(|e| format!("Redis LTRIM failed: {}", e))?;
+
+        debug!("📝 Added activity event: {}", event.event_type);
+        Ok(())
+    }
+
+    /// Get recent activity events
+    pub async fn get_activity_events(&self, limit: i64) -> TradingResult<Vec<crate::models::persistent_state::ActivityEvent>> {
+        let events_data: Vec<String> = self.list_range_raw("dashboard:activity_feed", 0, limit - 1).await?;
+
+        let mut events = Vec::new();
+        for data in events_data {
+            match serde_json::from_str(&data) {
+                Ok(event) => events.push(event),
+                Err(e) => warn!("Failed to deserialize activity event: {}", e),
+            }
+        }
+
+        Ok(events)
+    }
+
+    /// Update realtime metrics
+    pub async fn update_realtime_metrics(&self, metrics: &crate::models::persistent_state::RealtimeMetrics) -> TradingResult<()> {
+        let serialized = serde_json::to_string(metrics)
+            .map_err(|e| format!("Serialization failed: {}", e))?;
+
+        let mut conn = self.get_connection().await?;
+        let _: () = conn.set_ex("realtime:metrics", &serialized, 300)
+            .await
+            .map_err(|e| format!("Redis SET failed: {}", e))?;
+
+        Ok(())
+    }
+
+    /// Get realtime metrics
+    pub async fn get_realtime_metrics(&self) -> TradingResult<Option<crate::models::persistent_state::RealtimeMetrics>> {
+        let mut conn = self.get_connection().await?;
+
+        match conn.get::<_, Option<String>>("realtime:metrics").await {
+            Ok(Some(data)) => {
+                let metrics = serde_json::from_str(&data)
+                    .map_err(|e| format!("Deserialization failed: {}", e))?;
+                Ok(Some(metrics))
+            },
+            Ok(None) => Ok(None),
+            Err(e) => Err(format!("Redis GET failed: {}", e).into())
+        }
+    }
+
+    /// Update bot status
+    pub async fn update_bot_status(&self, status: &crate::models::persistent_state::BotStatus) -> TradingResult<()> {
+        let serialized = serde_json::to_string(status)
+            .map_err(|e| format!("Serialization failed: {}", e))?;
+
+        let mut conn = self.get_connection().await?;
+        let _: () = conn.set_ex("bot:status", &serialized, 3600)
+            .await
+            .map_err(|e| format!("Redis SET failed: {}", e))?;
+
+        Ok(())
+    }
+
+    /// Get bot status
+    pub async fn get_bot_status(&self) -> TradingResult<Option<crate::models::persistent_state::BotStatus>> {
+        let mut conn = self.get_connection().await?;
+
+        match conn.get::<_, Option<String>>("bot:status").await {
+            Ok(Some(data)) => {
+                let status = serde_json::from_str(&data)
+                    .map_err(|e| format!("Deserialization failed: {}", e))?;
+                Ok(Some(status))
+            },
+            Ok(None) => Ok(None),
+            Err(e) => Err(format!("Redis GET failed: {}", e).into())
+        }
     }
 }
 

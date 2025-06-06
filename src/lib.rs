@@ -17,6 +17,7 @@ pub mod execution;
 pub mod live_trading_engine;
 pub mod models;
 pub mod pipeline;
+pub mod reflex_core;
 pub mod risk_management;
 pub mod strategy;
 pub mod utils;

@@ -193,6 +193,15 @@ pub struct SolanaConfig {
 
     /// Request timeout in seconds
     pub request_timeout_seconds: u64,
+
+    /// Wallet private key (Base58 encoded)
+    pub private_key: Option<String>,
+
+    /// Wallet file path
+    pub wallet_path: Option<String>,
+
+    /// Wallet public key
+    pub public_key: Option<String>,
 }
 
 /// Jupiter DEX aggregator configuration
@@ -235,6 +244,9 @@ impl Default for SolanaConfig {
             api_key: None,
             connection_timeout_seconds: 30,
             request_timeout_seconds: 10,
+            private_key: None,
+            wallet_path: None,
+            public_key: None,
         }
     }
 }
@@ -421,6 +433,11 @@ impl AppConfig {
         }
 
         config.solana.api_key = env::var("HELIUS_API_KEY").ok();
+
+        // Wallet configuration
+        config.solana.private_key = env::var("SOLANA_PRIVATE_KEY").ok();
+        config.solana.wallet_path = env::var("SOLANA_WALLET_PATH").ok();
+        config.solana.public_key = env::var("SOLANA_PUBLIC_KEY").ok();
 
         // Jupiter configuration
         if let Ok(api_url) = env::var("JUPITER_API_URL") {

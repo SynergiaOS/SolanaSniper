@@ -79,6 +79,9 @@ class DragonflyDBManager:
         saved_count = 0
         pipeline = self.redis_client.pipeline()
 
+        # Clear old opportunities list before adding new ones
+        pipeline.delete("all_raw_opportunities")
+
         for opp in opportunities:
             try:
                 # Create raw opportunity record

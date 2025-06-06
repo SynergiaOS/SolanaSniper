@@ -14,14 +14,16 @@ use sniper_bot::config::AppConfig;
 use sniper_bot::db_connector::{DbClient, DbConfig};
 use sniper_bot::pipeline::controller::PipelineController;
 use sniper_bot::models::TradingResult;
+use sniper_bot::models::persistent_state::{DashboardStats, RealtimeMetrics, BotStatus, ActivityEvent};
 use clap::{Arg, Command};
 use dotenvy::dotenv;
 use std::env;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use tokio::signal;
 use tokio::time::interval;
 use tracing::{info, error, warn, debug};
 use tracing_subscriber::{fmt, EnvFilter};
+use chrono::Utc;
 
 #[tokio::main]
 async fn main() -> TradingResult<()> {
@@ -147,7 +149,38 @@ async fn main() -> TradingResult<()> {
     
     let mut interval_timer = interval(processing_interval);
     let mut cycle_count = 0u64;
-    
+    let start_time = Instant::now();
+
+    // Initialize bot status in database
+    let bot_status = BotStatus {
+        state: "Running".to_string(),
+        mode: mode.clone(),
+        started_at: Utc::now(),
+        last_activity: Utc::now(),
+        config_hash: "phase6".to_string(),
+        version: "2.0.0-phase6".to_string(),
+        health: serde_json::json!({"status": "healthy", "uptime": 0}),
+    };
+
+    if let Err(e) = db_client.update_bot_status(&bot_status).await {
+        warn!("Failed to update bot status: {}", e);
+    }
+
+    // Add startup activity event
+    let startup_event = ActivityEvent {
+        id: format!("startup_{}", Utc::now().timestamp()),
+        event_type: "BotStarted".to_string(),
+        description: format!("SniperBot 2.0 started in {} mode", mode),
+        token_address: None,
+        timestamp: Utc::now(),
+        severity: "Info".to_string(),
+        metadata: serde_json::json!({"mode": mode, "version": "2.0.0-phase6"}),
+    };
+
+    if let Err(e) = db_client.add_activity_event(&startup_event).await {
+        warn!("Failed to add startup event: {}", e);
+    }
+
     info!("✅ AUTONOMOUS ORGANISM READY - Entering continuous operation mode");
     info!("🧠 The Persistent Brain is now active and processing...");
     info!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
@@ -165,17 +198,91 @@ async fn main() -> TradingResult<()> {
                 match pipeline_controller.process_opportunities_from_db().await {
                     Ok(processed_count) => {
                         let duration = cycle_start.elapsed();
-                        
+
+                        // Update realtime metrics
+                        let realtime_metrics = RealtimeMetrics {
+                            cycle_number: cycle_count,
+                            cycle_duration_ms: duration.as_millis() as u64,
+                            opportunities_processed: processed_count as u64,
+                            decisions_made: 0, // TODO: get from pipeline controller
+                            timestamp: Utc::now(),
+                            memory_usage_mb: 0.0, // TODO: implement memory monitoring
+                            cpu_usage_percent: 0.0, // TODO: implement CPU monitoring
+                            db_connected: true,
+                        };
+
+                        if let Err(e) = db_client.update_realtime_metrics(&realtime_metrics).await {
+                            warn!("Failed to update realtime metrics: {}", e);
+                        }
+
+                        // Update dashboard stats every 10 cycles
+                        if cycle_count % 10 == 0 {
+                            let stats = pipeline_controller.stats();
+                            let dashboard_stats = DashboardStats {
+                                total_opportunities: stats.total_candidates_found as u64,
+                                active_opportunities: 0, // TODO: get active count
+                                total_trades: 0, // TODO: implement trade tracking
+                                active_positions: 0, // TODO: get active positions
+                                total_pnl_usd: 0.0, // TODO: implement P&L tracking
+                                success_rate: 0.0, // TODO: calculate success rate
+                                uptime_seconds: start_time.elapsed().as_secs(),
+                                last_updated: Utc::now(),
+                                bot_status: "Running".to_string(),
+                                processing_speed: (stats.total_candidates_found as f64) / (start_time.elapsed().as_secs() as f64 / 60.0), // per minute
+                            };
+
+                            if let Err(e) = db_client.update_dashboard_stats(&dashboard_stats).await {
+                                warn!("Failed to update dashboard stats: {}", e);
+                            }
+                        }
+
                         if processed_count > 0 {
-                            info!("🎉 CYCLE #{} COMPLETED: {} opportunities processed in {:.2}s", 
+                            info!("🎉 CYCLE #{} COMPLETED: {} opportunities processed in {:.2}s",
                                   cycle_count, processed_count, duration.as_secs_f64());
+
+                            // Add activity event for significant processing
+                            let activity_event = ActivityEvent {
+                                id: format!("cycle_{}_{}", cycle_count, Utc::now().timestamp()),
+                                event_type: "OpportunitiesProcessed".to_string(),
+                                description: format!("Processed {} opportunities in cycle #{}", processed_count, cycle_count),
+                                token_address: None,
+                                timestamp: Utc::now(),
+                                severity: "Info".to_string(),
+                                metadata: serde_json::json!({
+                                    "cycle": cycle_count,
+                                    "processed_count": processed_count,
+                                    "duration_ms": duration.as_millis()
+                                }),
+                            };
+
+                            if let Err(e) = db_client.add_activity_event(&activity_event).await {
+                                warn!("Failed to add activity event: {}", e);
+                            }
                         } else {
-                            debug!("🏁 Cycle #{} completed: No new opportunities (Duration: {:.2}s)", 
+                            debug!("🏁 Cycle #{} completed: No new opportunities (Duration: {:.2}s)",
                                    cycle_count, duration.as_secs_f64());
                         }
                     }
                     Err(e) => {
                         error!("💀 Cycle #{} FAILED: {} (Continuing to next cycle)", cycle_count, e);
+
+                        // Add error activity event
+                        let error_event = ActivityEvent {
+                            id: format!("error_{}_{}", cycle_count, Utc::now().timestamp()),
+                            event_type: "CycleError".to_string(),
+                            description: format!("Cycle #{} failed: {}", cycle_count, e),
+                            token_address: None,
+                            timestamp: Utc::now(),
+                            severity: "Error".to_string(),
+                            metadata: serde_json::json!({
+                                "cycle": cycle_count,
+                                "error": e.to_string()
+                            }),
+                        };
+
+                        if let Err(e) = db_client.add_activity_event(&error_event).await {
+                            warn!("Failed to add error event: {}", e);
+                        }
                     }
                 }
                 

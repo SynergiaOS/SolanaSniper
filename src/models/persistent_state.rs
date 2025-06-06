@@ -251,6 +251,111 @@ pub struct SystemMetrics {
     pub success_rate_percentage: f64,
 }
 
+/// Dashboard statistics for frontend display
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DashboardStats {
+    /// Total opportunities processed
+    pub total_opportunities: u64,
+    /// Active opportunities count
+    pub active_opportunities: u64,
+    /// Total trades executed
+    pub total_trades: u64,
+    /// Active positions count
+    pub active_positions: u64,
+    /// Total P&L in USD
+    pub total_pnl_usd: f64,
+    /// Success rate percentage
+    pub success_rate: f64,
+    /// Bot uptime in seconds
+    pub uptime_seconds: u64,
+    /// Last update timestamp
+    pub last_updated: DateTime<Utc>,
+    /// Current bot status
+    pub bot_status: String,
+    /// Processing speed (opportunities per minute)
+    pub processing_speed: f64,
+}
+
+/// Real-time metrics updated every cycle
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RealtimeMetrics {
+    /// Current cycle number
+    pub cycle_number: u64,
+    /// Cycle duration in milliseconds
+    pub cycle_duration_ms: u64,
+    /// Opportunities processed this cycle
+    pub opportunities_processed: u64,
+    /// Decisions made this cycle
+    pub decisions_made: u64,
+    /// Timestamp of this cycle
+    pub timestamp: DateTime<Utc>,
+    /// Memory usage in MB
+    pub memory_usage_mb: f64,
+    /// CPU usage percentage
+    pub cpu_usage_percent: f64,
+    /// Database connection status
+    pub db_connected: bool,
+}
+
+/// Activity feed event for dashboard
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ActivityEvent {
+    /// Unique event ID
+    pub id: String,
+    /// Event type (OpportunityFound, TradeExecuted, etc.)
+    pub event_type: String,
+    /// Event description
+    pub description: String,
+    /// Associated token address (if applicable)
+    pub token_address: Option<String>,
+    /// Event timestamp
+    pub timestamp: DateTime<Utc>,
+    /// Event severity (Info, Warning, Error)
+    pub severity: String,
+    /// Additional metadata
+    pub metadata: serde_json::Value,
+}
+
+/// Bot status information
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BotStatus {
+    /// Bot state (Running, Paused, Stopped, Error)
+    pub state: String,
+    /// Current mode (DryRun, Live)
+    pub mode: String,
+    /// Start time
+    pub started_at: DateTime<Utc>,
+    /// Last activity timestamp
+    pub last_activity: DateTime<Utc>,
+    /// Current configuration hash
+    pub config_hash: String,
+    /// Version information
+    pub version: String,
+    /// Health status
+    pub health: serde_json::Value,
+}
+
+/// Alert/notification for dashboard
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Alert {
+    /// Alert ID
+    pub id: String,
+    /// Alert type (RiskAlert, TradeAlert, SystemAlert)
+    pub alert_type: String,
+    /// Alert title
+    pub title: String,
+    /// Alert message
+    pub message: String,
+    /// Severity level (Low, Medium, High, Critical)
+    pub severity: String,
+    /// Creation timestamp
+    pub created_at: DateTime<Utc>,
+    /// Whether alert has been acknowledged
+    pub acknowledged: bool,
+    /// Associated data
+    pub data: serde_json::Value,
+}
+
 /// Database key patterns for organized storage
 pub struct DbKeys;
 
@@ -312,6 +417,37 @@ impl DbKeys {
 
     /// Health check status: health_status
     pub const HEALTH_STATUS: &'static str = "health_status";
+
+    // === DASHBOARD-SPECIFIC KEYS ===
+
+    /// Dashboard statistics (aggregated data for quick access): dashboard:stats
+    pub const DASHBOARD_STATS: &'static str = "dashboard:stats";
+
+    /// Recent activity feed (last 100 events): dashboard:activity_feed
+    pub const DASHBOARD_ACTIVITY_FEED: &'static str = "dashboard:activity_feed";
+
+    /// Trading history (completed trades): trading_history
+    pub const TRADING_HISTORY: &'static str = "trading_history";
+
+    /// Real-time metrics (updated every cycle): realtime:metrics
+    pub const REALTIME_METRICS: &'static str = "realtime:metrics";
+
+    /// Bot status and configuration: bot:status
+    pub const BOT_STATUS: &'static str = "bot:status";
+    pub const BOT_CONFIG_CACHE: &'static str = "bot:config";
+
+    /// Alerts and notifications: alerts:queue
+    pub const ALERTS_QUEUE: &'static str = "alerts:queue";
+
+    /// Individual trade record: trade:{trade_id}
+    pub fn trade_record(trade_id: &str) -> String {
+        format!("trade:{}", trade_id)
+    }
+
+    /// Individual alert record: alert:{alert_id}
+    pub fn alert_record(alert_id: &str) -> String {
+        format!("alert:{}", alert_id)
+    }
 }
 
 impl RawOpportunity {

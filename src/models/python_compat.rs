@@ -38,14 +38,23 @@ pub struct PythonHotCandidate {
 impl PythonRawOpportunity {
     /// Convert to Rust native format
     pub fn to_rust_format(&self) -> Result<crate::models::persistent_state::RawOpportunity, String> {
-        // Parse timestamps
-        let discovered_at = DateTime::parse_from_rfc3339(&self.discovered_at)
-            .map_err(|e| format!("Failed to parse discovered_at: {}", e))?
-            .with_timezone(&Utc);
-            
-        let expires_at = DateTime::parse_from_rfc3339(&self.expires_at)
-            .map_err(|e| format!("Failed to parse expires_at: {}", e))?
-            .with_timezone(&Utc);
+        // Parse discovered_at timestamp
+        let discovered_at = if let Ok(dt) = DateTime::parse_from_rfc3339(&self.discovered_at) {
+            dt.with_timezone(&Utc)
+        } else if let Ok(naive_dt) = chrono::NaiveDateTime::parse_from_str(&self.discovered_at, "%Y-%m-%dT%H:%M:%S%.f") {
+            DateTime::<Utc>::from_naive_utc_and_offset(naive_dt, Utc)
+        } else {
+            return Err(format!("Failed to parse discovered_at: {}", self.discovered_at));
+        };
+
+        // Parse expires_at timestamp
+        let expires_at = if let Ok(dt) = DateTime::parse_from_rfc3339(&self.expires_at) {
+            dt.with_timezone(&Utc)
+        } else if let Ok(naive_dt) = chrono::NaiveDateTime::parse_from_str(&self.expires_at, "%Y-%m-%dT%H:%M:%S%.f") {
+            DateTime::<Utc>::from_naive_utc_and_offset(naive_dt, Utc)
+        } else {
+            return Err(format!("Failed to parse expires_at: {}", self.expires_at));
+        };
 
         // Convert status
         let status = match self.status.as_str() {
@@ -97,21 +106,36 @@ impl PythonRawOpportunity {
 
     /// Check if opportunity is still valid (not expired)
     pub fn is_valid(&self) -> bool {
+        // Try RFC3339 first (with timezone)
         if let Ok(expires_at) = DateTime::parse_from_rfc3339(&self.expires_at) {
-            Utc::now() < expires_at.with_timezone(&Utc)
-        } else {
-            false
+            return Utc::now() < expires_at.with_timezone(&Utc);
         }
+
+        // If that fails, try parsing as naive datetime and assume UTC
+        if let Ok(naive_dt) = chrono::NaiveDateTime::parse_from_str(&self.expires_at, "%Y-%m-%dT%H:%M:%S%.f") {
+            let expires_at_utc = DateTime::<Utc>::from_naive_utc_and_offset(naive_dt, Utc);
+            return Utc::now() < expires_at_utc;
+        }
+
+        false
     }
 
     /// Get age in minutes
     pub fn age_minutes(&self) -> Option<i64> {
+        // Try RFC3339 first (with timezone)
         if let Ok(discovered_at) = DateTime::parse_from_rfc3339(&self.discovered_at) {
             let duration = Utc::now().signed_duration_since(discovered_at.with_timezone(&Utc));
-            Some(duration.num_minutes())
-        } else {
-            None
+            return Some(duration.num_minutes());
         }
+
+        // If that fails, try parsing as naive datetime and assume UTC
+        if let Ok(naive_dt) = chrono::NaiveDateTime::parse_from_str(&self.discovered_at, "%Y-%m-%dT%H:%M:%S%.f") {
+            let discovered_at_utc = DateTime::<Utc>::from_naive_utc_and_offset(naive_dt, Utc);
+            let duration = Utc::now().signed_duration_since(discovered_at_utc);
+            return Some(duration.num_minutes());
+        }
+
+        None
     }
 }
 
