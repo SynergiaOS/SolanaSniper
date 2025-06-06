@@ -15,9 +15,18 @@ const SignalsDashboard: React.FC = () => {
   }, [signals]);
 
   // Filter signals by selected strategy
-  const filteredSignals = selectedStrategy 
+  const filteredSignals = selectedStrategy
     ? signals.filter(signal => signal.strategy === selectedStrategy)
     : signals;
+
+  // Debug logging
+  console.log('🔍 SignalsDashboard render:', {
+    totalSignals: signals.length,
+    filteredSignals: filteredSignals.length,
+    selectedStrategy,
+    firstSignal: signals[0],
+    strategies: [...new Set(signals.map(s => s.strategy))]
+  });
 
   const getSignalIcon = (signalType: string) => {
     switch (signalType) {
@@ -75,6 +84,24 @@ const SignalsDashboard: React.FC = () => {
               className="px-3 py-1 bg-status-info text-white rounded text-sm hover:bg-blue-700 transition-colors shadow-trading"
             >
               Refresh
+            </button>
+            <button
+              onClick={() => {
+                console.log('🧪 Testing API directly...');
+                fetch('http://localhost:8084/api/events?limit=3')
+                  .then(r => {
+                    console.log('📡 Response status:', r.status);
+                    return r.json();
+                  })
+                  .then(d => {
+                    console.log('✅ Direct API test successful:', d.length, 'events');
+                    console.log('📊 First event:', d[0]);
+                  })
+                  .catch(e => console.error('❌ Direct API test failed:', e));
+              }}
+              className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 transition-colors shadow-trading"
+            >
+              Test API
             </button>
           </div>
         </div>

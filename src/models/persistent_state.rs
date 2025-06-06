@@ -8,8 +8,24 @@ for the Hub-and-Spoke architecture of SniperBot 2.0.
 use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
 use crate::data_fetcher::soul_meteor_scanner::HotCandidate;
-use crate::pipeline::opportunity::ValidatedOpportunity;
-use crate::pipeline::decision_engine::TradingDecision;
+// Commented out until these modules are properly implemented
+// use crate::pipeline::opportunity::ValidatedOpportunity;
+// use crate::pipeline::decision_engine::TradingDecision;
+
+// Temporary placeholder types until pipeline modules are implemented
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ValidatedOpportunity {
+    pub token_address: String,
+    pub score: f64,
+    pub validated: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TradingDecision {
+    pub action: String,
+    pub amount: f64,
+    pub confidence: f64,
+}
 
 /// Raw opportunity from Soul Meteor Scanner (stored in raw_opportunities)
 #[derive(Debug, Clone, Serialize, Deserialize)]

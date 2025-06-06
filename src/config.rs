@@ -423,13 +423,36 @@ impl AppConfig {
             }
         }
 
-        // Solana configuration
-        if let Ok(rpc_url) = env::var("HELIUS_RPC_URL") {
-            config.solana.rpc_url = rpc_url;
-        }
+        // Solana configuration - Network switching support
+        let network = env::var("SOLANA_NETWORK").unwrap_or_else(|_| "mainnet".to_string());
 
-        if let Ok(ws_url) = env::var("HELIUS_WEBSOCKET_URL") {
-            config.solana.websocket_url = ws_url;
+        match network.to_lowercase().as_str() {
+            "testnet" => {
+                // Use public testnet endpoints
+                config.solana.rpc_url = env::var("HELIUS_TESTNET_RPC_URL")
+                    .unwrap_or_else(|_| "https://api.testnet.solana.com".to_string());
+                config.solana.websocket_url = env::var("HELIUS_TESTNET_WS_URL")
+                    .unwrap_or_else(|_| "wss://api.testnet.solana.com".to_string());
+                info!("🌐 Using TESTNET configuration");
+            }
+            "devnet" => {
+                // Use Helius devnet endpoints
+                config.solana.rpc_url = env::var("HELIUS_DEVNET_RPC_URL")
+                    .unwrap_or_else(|_| "https://devnet.helius-rpc.com".to_string());
+                config.solana.websocket_url = env::var("HELIUS_DEVNET_WS_URL")
+                    .unwrap_or_else(|_| "wss://devnet.helius-rpc.com".to_string());
+                info!("🌐 Using DEVNET configuration");
+            }
+            _ => {
+                // Default to mainnet
+                if let Ok(rpc_url) = env::var("HELIUS_RPC_URL") {
+                    config.solana.rpc_url = rpc_url;
+                }
+                if let Ok(ws_url) = env::var("HELIUS_WEBSOCKET_URL") {
+                    config.solana.websocket_url = ws_url;
+                }
+                info!("🌐 Using MAINNET configuration");
+            }
         }
 
         config.solana.api_key = env::var("HELIUS_API_KEY").ok();

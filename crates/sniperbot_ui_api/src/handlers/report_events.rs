@@ -58,6 +58,7 @@ pub async fn receive_report_event(
 /// GET /api/events - Get all stored events
 pub async fn get_all_events(State(state): State<AppState>) -> Json<Vec<ReportEvent>> {
     let events = state.report_events.lock().await;
+    info!("📊 GET /api/events - returning {} events", events.len());
     Json(events.clone())
 }
 

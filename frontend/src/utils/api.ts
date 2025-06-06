@@ -23,13 +23,26 @@ export interface StrategyPerformance {
   total_pnl: number;
 }
 
+export interface Portfolio {
+  wallet_address: string;
+  network: string;
+  sol_balance: number;
+  sol_price_usd: number;
+  total_usd_value: number;
+  balance_status: string;
+  active_positions: any[];
+  trading_mode: string;
+  last_updated: string;
+}
+
 export interface Signal {
-  id: string;
+  type: string;
   strategy: string;
   signal_type: 'Buy' | 'Sell';
   symbol: string;
   strength: number;
   timestamp: string;
+  metadata?: any;
   price?: number;
   reason?: string;
 }
@@ -43,6 +56,12 @@ export interface Trade {
   status: 'Pending' | 'Filled' | 'Cancelled' | 'Failed';
   timestamp: string;
   strategy?: string;
+}
+
+export interface ReportEvent {
+  event_type: string;
+  timestamp: string;
+  data: any;
 }
 
 export interface WebSocketMessage {
@@ -71,22 +90,70 @@ export class SniperBotAPI {
     return response.json();
   }
 
+  async getPortfolio(): Promise<Portfolio> {
+    const response = await fetch(`${this.baseUrl}/api/v1/portfolio`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch portfolio: ${response.statusText}`);
+    }
+    return response.json();
+  }
+
   async getSignals(limit = 10): Promise<Signal[]> {
-    const response = await fetch(`${this.baseUrl}/api/signals?limit=${limit}`);
+    console.log(`🚀 getSignals called with limit=${limit}, baseUrl=${this.baseUrl}`);
+    const url = `${this.baseUrl}/api/events?limit=${limit}`;
+    console.log(`📡 Fetching: ${url}`);
+
+    const response = await fetch(url);
+    console.log(`📡 Response status: ${response.status} ${response.statusText}`);
+
     if (!response.ok) {
       throw new Error(`Failed to fetch signals: ${response.statusText}`);
     }
     const data = await response.json();
-    return data.signals || [];
+    console.log('🔍 Raw API response:', data);
+
+    // Backend returns array directly, not wrapped in {events: [...]}
+    if (!Array.isArray(data)) {
+      console.warn('⚠️ API response is not an array:', data);
+      return [];
+    }
+
+    // Transform backend ReportEvent to frontend Signal format
+    const signals = data
+      .filter(event => event.type === 'SignalGenerated')
+      .map((event, index) => ({
+        id: `${event.timestamp}-${index}`, // Generate unique ID
+        type: event.type,
+        strategy: event.strategy,
+        signal_type: event.signal_type,
+        symbol: event.symbol,
+        strength: event.strength,
+        timestamp: event.timestamp,
+        metadata: event.metadata,
+        price: 100.0 // Mock price for now
+      }));
+
+    console.log(`✅ Transformed ${signals.length} signals from ${data.length} events`);
+    return signals;
   }
 
   async getTrades(limit = 10): Promise<Trade[]> {
-    const response = await fetch(`${this.baseUrl}/api/trades?limit=${limit}`);
+    const response = await fetch(`${this.baseUrl}/api/v1/orders?limit=${limit}`);
     if (!response.ok) {
       throw new Error(`Failed to fetch trades: ${response.statusText}`);
     }
     const data = await response.json();
-    return data.trades || [];
+    return data.orders || [];
+  }
+
+  async getEvents(limit = 10): Promise<ReportEvent[]> {
+    const response = await fetch(`${this.baseUrl}/api/events?limit=${limit}`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch events: ${response.statusText}`);
+    }
+    const data = await response.json();
+    // Backend returns array directly, not wrapped in {events: [...]}
+    return Array.isArray(data) ? data : [];
   }
 
   async startBot(): Promise<{ success: boolean; message: string }> {

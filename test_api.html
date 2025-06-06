@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SniperBot API Test</title>
+</head>
+<body>
+    <h1>SniperBot API Test</h1>
+    <button onclick="testAPI()">Test API</button>
+    <div id="results"></div>
+
+    <script>
+        async function testAPI() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<p>Testing API...</p>';
+            
+            try {
+                console.log('🔍 Testing API connection...');
+                
+                // Test events endpoint
+                const response = await fetch('http://localhost:8084/api/events?limit=3');
+                console.log('📡 Response status:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('📊 Raw API response:', data);
+                console.log('📊 Data type:', typeof data, 'Is array:', Array.isArray(data));
+                console.log('📊 Data length:', data.length);
+                
+                if (data.length > 0) {
+                    console.log('📊 First event:', data[0]);
+                }
+                
+                // Transform data like frontend does
+                const signals = data
+                    .filter(event => event.type === 'SignalGenerated')
+                    .map((event, index) => ({
+                        id: `${event.timestamp}-${index}`,
+                        type: event.type,
+                        strategy: event.strategy,
+                        signal_type: event.signal_type,
+                        symbol: event.symbol,
+                        strength: event.strength,
+                        timestamp: event.timestamp,
+                        metadata: event.metadata,
+                        price: 100.0
+                    }));
+                
+                console.log(`✅ Transformed ${signals.length} signals from ${data.length} events`);
+                console.log('🎯 Signals:', signals);
+                
+                resultsDiv.innerHTML = `
+                    <h2>✅ API Test Results</h2>
+                    <p><strong>Total events:</strong> ${data.length}</p>
+                    <p><strong>Signal events:</strong> ${signals.length}</p>
+                    <p><strong>First signal:</strong></p>
+                    <pre>${JSON.stringify(signals[0] || 'No signals', null, 2)}</pre>
+                `;
+                
+            } catch (error) {
+                console.error('❌ API Test failed:', error);
+                resultsDiv.innerHTML = `
+                    <h2>❌ API Test Failed</h2>
+                    <p><strong>Error:</strong> ${error.message}</p>
+                `;
+            }
+        }
+        
+        // Auto-test on load
+        window.onload = testAPI;
+    </script>
+</body>
+</html>

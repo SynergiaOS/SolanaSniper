@@ -92,6 +92,7 @@ sniperbot_ui_api = { path = "crates/sniperbot_ui_api" }
 # Security
 ring = "0.17"
 mistralai-client = "0.14.0"
+rand = "0.9.1"
 
 [dev-dependencies]
 tokio-test = "0.4"
@@ -112,3 +113,11 @@ debug = true
 [[bin]]
 name = "sniper-bot"
 path = "src/main.rs"
+
+[[bin]]
+name = "test_reflex_core"
+path = "src/bin/test_reflex_core.rs"
+
+[[bin]]
+name = "hybrid_system"
+path = "src/bin/hybrid_system.rs"

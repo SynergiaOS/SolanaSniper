@@ -165,10 +165,13 @@ export const SniperBotProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     refreshSignals: async () => {
       try {
+        console.log('🔄 Refreshing signals...');
         const signals = await sniperBotAPI.getSignals(20);
+        console.log('📊 Received signals:', signals.length);
         dispatch({ type: 'SET_SIGNALS', payload: signals });
+        console.log('✅ Signals updated in state');
       } catch (error) {
-        console.error('Failed to refresh signals:', error);
+        console.error('❌ Failed to refresh signals:', error);
       }
     },
 
@@ -224,9 +227,14 @@ export const SniperBotProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   // Initial data load
   useEffect(() => {
+    console.log('🚀 SniperBotContext initializing...');
+    console.log('🤖 Fetching initial bot status...');
     actions.refreshBotStatus();
+    console.log('📈 Fetching initial signals...');
     actions.refreshSignals();
+    console.log('💰 Fetching initial trades...');
     actions.refreshTrades();
+    console.log('✅ SniperBotContext initialized');
   }, []);
 
   // Periodic refresh

@@ -20,7 +20,7 @@ mod risk_management;
 mod strategy;
 mod utils;
 
-use config::Config;
+use config::{Config, AppConfig};
 use utils::logging;
 use data_fetcher::{
     realtime_websocket_manager::{RealtimeWebSocketManager, ConnectionStatus},
@@ -113,7 +113,7 @@ async fn main() -> Result<()> {
     }
 
     // Load configuration
-    let config = Config::load_from_path(&args.config)?;
+    let config = AppConfig::from_env();
     info!("✅ Configuration loaded successfully");
 
     // Initialize bot components
@@ -276,12 +276,12 @@ impl SniperBot {
         // Initialize Risk Manager
         info!("🛡️ Initializing Risk Manager...");
         let risk_config = crate::utils::config::RiskManagementConfig {
-            global_max_exposure: config.risk_management.max_position_size_usd,
-            max_daily_loss: config.risk_management.max_daily_loss_usd,
-            max_drawdown: config.risk_management.max_drawdown_percent / 100.0,
+            global_max_exposure: config.trading.max_position_size_sol,
+            max_daily_loss: config.risk_management.max_daily_loss_sol,
+            max_drawdown: config.risk_management.circuit_breaker_threshold,
             position_sizing_method: "percentage".to_string(),
             emergency_stop_enabled: true,
-            circuit_breaker_threshold: 0.15,
+            circuit_breaker_threshold: config.risk_management.circuit_breaker_threshold,
         };
         let risk_manager = Arc::new(
             RiskManager::new(risk_config)
