@@ -4,8 +4,11 @@ import Sidebar from './Sidebar';
 import BotStatusDashboard from '../dashboard/BotStatusDashboard';
 import SignalsDashboard from '../dashboard/SignalsDashboard';
 import TradesDashboard from '../dashboard/TradesDashboard';
+import ActivePositions from '../ActivePositions';
+import LiveEventLog from '../LiveEventLog';
+import PortfolioOverview from '../PortfolioOverview';
 
-type DashboardSection = 'status' | 'signals' | 'trades' | 'performance' | 'analytics' | 'settings';
+type DashboardSection = 'status' | 'portfolio' | 'signals' | 'trades' | 'positions' | 'events' | 'performance' | 'analytics' | 'settings';
 
 const DashboardLayout: React.FC = () => {
   const [activeSection, setActiveSection] = useState<DashboardSection>('status');
@@ -17,10 +20,16 @@ const DashboardLayout: React.FC = () => {
     switch (activeSection) {
       case 'status':
         return <BotStatusDashboard />;
+      case 'portfolio':
+        return <PortfolioOverview />;
       case 'signals':
         return <SignalsDashboard />;
       case 'trades':
         return <TradesDashboard />;
+      case 'positions':
+        return <ActivePositions />;
+      case 'events':
+        return <LiveEventLog />;
       case 'performance':
         return <div className="p-8 text-center text-slate-500">Performance analytics coming soon...</div>;
       case 'analytics':

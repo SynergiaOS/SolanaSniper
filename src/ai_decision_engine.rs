@@ -1,8 +1,7 @@
 use crate::models::{TradingError, TokenInfo, AggregatedAnalytics, MarketConditions, PortfolioState, AIRecommendation};
 use mistralai_client::v1::client::Client as MistralClient;
-use mistralai_client::v1::chat::{ChatMessage, ChatMessageRole};
 use std::collections::HashMap;
-use tracing::{debug, error, info, warn, instrument};
+use tracing::{debug, info, warn, instrument};
 
 // Struct definition moved below
 

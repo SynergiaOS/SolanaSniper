@@ -408,6 +408,10 @@ impl DataAggregator {
             MarketEvent::WhaleAlert { token_address, amount_usd, .. } => {
                 warn!("🐋 Whale alert: ${:.2} movement in {}", amount_usd, token_address);
             }
+            MarketEvent::NewPoolCreated { pool_address, base_mint, quote_mint, .. } => {
+                info!("🆕 New pool created: {} ({}/{})", pool_address, base_mint, quote_mint);
+                // This is handled by strategies, not data aggregator
+            }
         }
         Ok(())
     }

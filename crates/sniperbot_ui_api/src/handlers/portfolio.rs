@@ -6,6 +6,30 @@ use std::str::FromStr;
 use tracing::{info, warn};
 
 pub async fn get_portfolio() -> Json<Value> {
+    info!("📊 Fetching portfolio data...");
+
+    // Try to read from portfolio manager's cache first
+    match read_portfolio_cache().await {
+        Ok(Some(portfolio_data)) => {
+            info!("✅ Portfolio data loaded from cache");
+            Json(portfolio_data)
+        }
+        _ => {
+            // Fallback to direct RPC call
+            info!("⚠️ Portfolio cache not available, falling back to direct RPC");
+            get_portfolio_fallback().await
+        }
+    }
+}
+
+async fn read_portfolio_cache() -> Result<Option<Value>, Box<dyn std::error::Error + Send + Sync>> {
+    // Read from portfolio manager's temporary storage
+    let json_data = tokio::fs::read_to_string("/tmp/portfolio_status.json").await?;
+    let portfolio_data: Value = serde_json::from_str(&json_data)?;
+    Ok(Some(portfolio_data))
+}
+
+async fn get_portfolio_fallback() -> Json<Value> {
     // Get real wallet data from environment
     let public_key = std::env::var("SOLANA_PUBLIC_KEY")
         .unwrap_or_else(|_| "HhCMHCECoKmSwiQHFQ7mKJR5ahCDMZrEyoS9eZWgnXeh".to_string());
@@ -33,7 +57,10 @@ pub async fn get_portfolio() -> Json<Value> {
     };
 
     // Calculate USD value (approximate SOL price)
-    let sol_price_usd = 20.0; // Approximate devnet SOL value for display
+    let sol_price_usd = match network.as_str() {
+        "mainnet" => 150.0, // Real SOL price estimate
+        _ => 20.0, // Devnet SOL for display
+    };
     let total_usd_value = sol_balance * sol_price_usd;
 
     Json(json!({
@@ -43,8 +70,9 @@ pub async fn get_portfolio() -> Json<Value> {
         "sol_price_usd": sol_price_usd,
         "total_usd_value": total_usd_value,
         "balance_status": balance_status,
-        "active_positions": [],
-        "trading_mode": std::env::var("DRY_RUN").unwrap_or_else(|_| "true".to_string()),
+        "token_balances": [],
+        "active_positions_count": 0,
+        "trading_mode": if std::env::var("PAPER_TRADING").unwrap_or_else(|_| "true".to_string()) == "true" { "PAPER" } else { "LIVE" },
         "last_updated": chrono::Utc::now().to_rfc3339()
     }))
 }

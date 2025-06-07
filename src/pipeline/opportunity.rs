@@ -270,6 +270,8 @@ mod tests {
             mint_x: "mint1".to_string(),
             mint_y: "mint2".to_string(),
             current_price: 1.0,
+            is_blacklisted: false,
+            hide: false,
         };
 
         let sentiment = SentimentReport {
@@ -303,6 +305,8 @@ mod tests {
             mint_x: "mint1".to_string(),
             mint_y: "mint2".to_string(),
             current_price: 1.0,
+            is_blacklisted: false,
+            hide: false,
         };
 
         let negative_sentiment = SentimentReport {

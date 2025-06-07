@@ -220,10 +220,11 @@ mod tests {
     use super::*;
     use chrono::Utc;
     
-    #[test]
-    fn test_position_size_calculation() {
+    #[tokio::test]
+    async fn test_position_size_calculation() {
         let config = AppConfig::default();
-        let db_connector = Arc::new(DbConnector::new(config.clone()).unwrap());
+        let db_config = crate::db_connector::DbConfig::default();
+        let db_connector = Arc::new(DbClient::new(db_config).await.unwrap());
         let executor = SniperExecutor::new(config, db_connector);
         
         let opportunity = NewTokenOpportunity {

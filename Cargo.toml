@@ -50,7 +50,7 @@ ethers = "2.0"
 
 # Jupiter and Jito integration
 # Jupiter integration via HTTP API calls
-# Jito integration for MEV protection
+# Jito integration for MEV protection - TARCZA ANTY-MEV (HTTP API)
 base64 = "0.22"
 bs58 = "0.5"
 bincode = "1.3"
@@ -93,6 +93,7 @@ sniperbot_ui_api = { path = "crates/sniperbot_ui_api" }
 ring = "0.17"
 mistralai-client = "0.14.0"
 rand = "0.9.1"
+spl-token = "8.0.0"
 
 [dev-dependencies]
 tokio-test = "0.4"
@@ -105,6 +106,18 @@ opt-level = 3
 lto = true
 codegen-units = 1
 panic = "abort"
+strip = true
+debug = false
+
+# Production optimizations
+[profile.production]
+inherits = "release"
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+strip = true
+debug = false
 
 [profile.dev]
 opt-level = 0
@@ -121,3 +134,15 @@ path = "src/bin/test_reflex_core.rs"
 [[bin]]
 name = "hybrid_system"
 path = "src/bin/hybrid_system.rs"
+
+[[bin]]
+name = "test_pure_sniper_strategy"
+path = "src/bin/test_pure_sniper_strategy.rs"
+
+[[bin]]
+name = "test_position_management"
+path = "src/bin/test_position_management.rs"
+
+[[bin]]
+name = "live_trading_system"
+path = "src/bin/live_trading_system.rs"

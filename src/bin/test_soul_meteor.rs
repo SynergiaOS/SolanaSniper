@@ -3,7 +3,7 @@
 Tests the Rust ↔ Python integration for Soul Meteor Scanner
 */
 
-use sniper_bot::data_fetcher::soul_meteor_scanner::{SoulMeteorScanner, SoulMeteorScannerConfig};
+use sniper_bot::data_fetcher::soul_meteor_scanner::SoulMeteorScanner;
 use tracing::{info, error};
 use tracing_subscriber;
 

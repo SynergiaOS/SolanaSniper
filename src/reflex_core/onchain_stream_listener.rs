@@ -6,7 +6,7 @@ use chrono::Utc;
 use solana_client::rpc_client::RpcClient;
 use solana_sdk::commitment_config::CommitmentConfig;
 use solana_sdk::pubkey::Pubkey;
-use solana_transaction_status::{UiTransactionEncoding, TransactionDetails, EncodedTransactionWithStatusMeta};
+use solana_transaction_status::{UiTransactionEncoding, TransactionDetails};
 use std::str::FromStr;
 use std::sync::Arc;
 use tokio::time::{sleep, Duration};

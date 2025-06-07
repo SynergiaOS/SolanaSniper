@@ -370,7 +370,7 @@ async fn get_trades(
 
 /// Get portfolio information
 async fn get_portfolio(State(server): State<Arc<ApiServer>>) -> impl IntoResponse {
-    let engine_status = server.trading_engine.get_status().await;
+    let engine_status = server.trading_engine.get_status();
     
     let portfolio_data = serde_json::json!({
         "total_value": engine_status.portfolio_value,
@@ -391,7 +391,7 @@ async fn get_portfolio(State(server): State<Arc<ApiServer>>) -> impl IntoRespons
 
 /// Get bot status
 async fn get_bot_status(State(server): State<Arc<ApiServer>>) -> impl IntoResponse {
-    let engine_status = server.trading_engine.get_status().await;
+    let engine_status = server.trading_engine.get_status();
     let active_strategies = server.strategy_manager.get_active_strategies().await;
     let strategy_performance = server.strategy_manager.get_all_performance().await;
     

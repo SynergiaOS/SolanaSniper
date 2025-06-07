@@ -10,13 +10,17 @@
 pub mod ai_decision_engine;
 pub mod ai_signal_processor;
 pub mod analytics_aggregator;
+pub mod api_server;
 pub mod config;
 pub mod data_fetcher;
 pub mod db_connector;
+pub mod dragonfly_manager;
 pub mod execution;
 pub mod live_trading_engine;
 pub mod models;
 pub mod pipeline;
+pub mod portfolio_manager;
+pub mod position_management;
 pub mod reflex_core;
 pub mod risk_management;
 pub mod strategy;

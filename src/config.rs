@@ -6,7 +6,7 @@ Centralized configuration for autonomous operation
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::sync::OnceLock;
-use tracing::{info, warn};
+use tracing::info;
 
 /// Global application configuration instance
 pub static APP_CONFIG: OnceLock<AppConfig> = OnceLock::new();
@@ -473,8 +473,8 @@ impl AppConfig {
             }
         }
 
-        // Jito configuration
-        if let Ok(jito_url) = env::var("JITO_BUNDLE_URL") {
+        // Jito configuration - TARCZA ANTY-MEV
+        if let Ok(jito_url) = env::var("JITO_BLOCK_ENGINE_URL") {
             config.jito.block_engine_url = jito_url;
         }
 
@@ -485,6 +485,12 @@ impl AppConfig {
         if let Ok(tip) = env::var("JITO_TIP_LAMPORTS") {
             if let Ok(val) = tip.parse() {
                 config.jito.tip_lamports = val;
+            }
+        }
+
+        if let Ok(timeout) = env::var("JITO_BUNDLE_TIMEOUT_SECONDS") {
+            if let Ok(val) = timeout.parse() {
+                config.jito.bundle_timeout_seconds = val;
             }
         }
 

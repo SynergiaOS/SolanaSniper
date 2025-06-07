@@ -82,7 +82,7 @@ pub struct Order {
     pub bundle_id: Option<String>,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 pub enum OrderSide {
     Buy,
     Sell,
@@ -426,6 +426,16 @@ pub enum MarketEvent {
         name: Option<String>,
         initial_price: Option<f64>,
         initial_liquidity: Option<f64>,
+        creator: Option<String>,
+        timestamp: u64,
+    },
+
+    /// New pool created (for Pure Sniper strategy)
+    NewPoolCreated {
+        pool_address: String,
+        base_mint: String,
+        quote_mint: String,
+        initial_liquidity: f64,
         creator: Option<String>,
         timestamp: u64,
     },

@@ -46,6 +46,13 @@ pub async fn create_app() -> Router {
         // Strategy endpoints
         .route("/api/strategy/:strategy/toggle", post(handlers::strategies::toggle_strategy))
         .route("/api/strategy/reset", post(handlers::strategies::reset_strategies))
+        // Position management endpoints (CRITICAL SAFETY FEATURES)
+        .route("/api/positions", get(handlers::positions::get_active_positions))
+        .route("/api/positions/:id", get(handlers::positions::get_position_details))
+        .route("/api/positions/:id/close", post(handlers::positions::close_position_manually))
+        .route("/api/positions/emergency-close-all", post(handlers::positions::emergency_close_all_positions))
+        // Live event stream (BOT INTELLIGENCE VISIBILITY)
+        .route("/api/live-events", get(handlers::live_events::get_live_events))
         // Serve static frontend files
         .nest_service("/", ServeDir::new("frontend/dist").fallback(ServeDir::new("frontend/dist/index.html")))
         .with_state(state)

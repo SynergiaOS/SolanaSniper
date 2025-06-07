@@ -8,6 +8,9 @@ use tracing::{info, warn};
 mod test_helpers;
 use test_helpers::*;
 
+// Import the macro
+use crate::skip_if_no_network;
+
 #[tokio::test]
 async fn test_jupiter_client_creation() {
     init_test_env();
@@ -173,15 +176,9 @@ async fn test_jupiter_multiple_quotes() {
             input_mint: tokens.sol.clone(),
             output_mint: tokens.usdc.clone(),
             amount: *amount,
-            slippage_bps: Some(50),
-            swap_mode: Some("ExactIn".to_string()),
-            dexes: None,
-            exclude_dexes: None,
-            restrict_intermediate_tokens: None,
+            slippage_bps: 50,
             only_direct_routes: Some(false),
             as_legacy_transaction: Some(false),
-            platform_fee_bps: None,
-            max_accounts: None,
         };
 
         let result = timeout(Duration::from_secs(8), client.get_quote(quote_request)).await;
@@ -233,15 +230,9 @@ async fn test_jupiter_error_handling() {
         input_mint: "invalid_mint_address".to_string(),
         output_mint: "another_invalid_mint".to_string(),
         amount: 1_000_000,
-        slippage_bps: Some(50),
-        swap_mode: Some("ExactIn".to_string()),
-        dexes: None,
-        exclude_dexes: None,
-        restrict_intermediate_tokens: None,
+        slippage_bps: 50,
         only_direct_routes: Some(false),
         as_legacy_transaction: Some(false),
-        platform_fee_bps: None,
-        max_accounts: None,
     };
 
     let result = client.get_quote(invalid_quote_request).await;

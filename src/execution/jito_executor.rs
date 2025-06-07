@@ -365,13 +365,13 @@ mod tests {
     #[tokio::test]
     async fn test_jito_executor_creation() {
         let config = crate::config::JitoConfig {
-            api_url: "https://mainnet.block-engine.jito.wtf/api/v1".to_string(),
-            tip_accounts: vec!["96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5".to_string()],
+            block_engine_url: "https://mainnet.block-engine.jito.wtf/api/v1".to_string(),
+            tip_lamports: 50_000_000,
+            enabled: true,
             bundle_timeout_seconds: 30,
-            max_tip_lamports: 50_000_000,
         };
         let executor = JitoExecutor::new(
-            config,
+            &config,
             "https://api.mainnet-beta.solana.com",
         );
         assert!(executor.is_ok());
@@ -380,13 +380,13 @@ mod tests {
     #[test]
     fn test_tip_calculation() {
         let config = crate::config::JitoConfig {
-            api_url: "https://mainnet.block-engine.jito.wtf/api/v1".to_string(),
-            tip_accounts: vec!["96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5".to_string()],
+            block_engine_url: "https://mainnet.block-engine.jito.wtf/api/v1".to_string(),
+            tip_lamports: 50_000_000,
+            enabled: true,
             bundle_timeout_seconds: 30,
-            max_tip_lamports: 50_000_000,
         };
         let executor = JitoExecutor::new(
-            config,
+            &config,
             "https://api.mainnet-beta.solana.com",
         ).unwrap();
 

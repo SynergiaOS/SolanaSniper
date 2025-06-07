@@ -6,9 +6,9 @@ what actions to take based on validated opportunities.
 */
 
 use crate::pipeline::opportunity::{ValidatedOpportunity, StrategyType, RiskLevel};
-use crate::models::{TradingResult, TradingError};
+use crate::models::TradingResult;
 use serde::{Deserialize, Serialize};
-use tracing::{info, warn, debug};
+use tracing::info;
 
 /// Trading decision with specific parameters
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -370,6 +370,8 @@ mod tests {
             mint_x: "mint1".to_string(),
             mint_y: "mint2".to_string(),
             current_price: 1.0,
+            is_blacklisted: false,
+            hide: false,
         };
 
         let sentiment = SentimentReport {

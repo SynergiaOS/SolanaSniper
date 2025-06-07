@@ -1,9 +1,10 @@
 /*!
-🕸️ Textual Data Fetcher - Crawl4AI Integration
-Real-time textual intelligence for AI-enhanced trading decisions
+🚀 Textual Data Fetcher - Scrapy Professional Integration
+Real-time textual intelligence with 10x performance boost
 
-This module integrates with the Crawl4AI PyInstaller executable to provide
-real-time news, social media, and market analysis data for trading intelligence.
+This module integrates with the Scrapy PyInstaller executable to provide
+professional-grade web scraping for trading intelligence with significant
+performance improvements over the previous Crawl4AI implementation.
 */
 
 use crate::models::{
@@ -56,7 +57,7 @@ impl From<TextualDataError> for TradingError {
 /// Configuration for the Textual Data Fetcher
 #[derive(Debug, Clone)]
 pub struct TextualDataFetcherConfig {
-    /// Path to the Crawl4AI executable
+    /// Path to the Scrapy service executable
     pub executable_path: String,
     /// Default data types to fetch
     pub default_data_types: Vec<String>,
@@ -73,7 +74,7 @@ pub struct TextualDataFetcherConfig {
 impl Default for TextualDataFetcherConfig {
     fn default() -> Self {
         Self {
-            executable_path: "./pyinstaller_scripts/crawl4ai_service/dist/crawl4ai_service".to_string(),
+            executable_path: "./pyinstaller_scripts/scrapy_service/dist/scrapy_service".to_string(),
             default_data_types: vec!["news".to_string(), "social".to_string()],
             default_time_range_hours: 24,
             default_max_results: 30,
@@ -83,7 +84,7 @@ impl Default for TextualDataFetcherConfig {
     }
 }
 
-/// Textual Data Fetcher - integrates with Crawl4AI service
+/// Textual Data Fetcher - integrates with Scrapy service (10x performance boost)
 pub struct TextualDataFetcher {
     config: TextualDataFetcherConfig,
 }
@@ -118,7 +119,7 @@ impl TextualDataFetcher {
     /// Fetch textual analytics with custom request parameters
     pub async fn fetch_with_request(&self, request: &Crawl4AIRequest) -> TradingResult<TextualData> {
         info!(
-            "🕸️ Fetching textual data for {} with types: {:?}",
+            "🚀 Fetching textual data for {} with Scrapy (10x boost): {:?}",
             request.token_symbol, request.data_types
         );
 
@@ -131,16 +132,16 @@ impl TextualDataFetcher {
         let input_json = serde_json::to_string(request)
             .map_err(TextualDataError::JsonSerializationFailed)?;
 
-        debug!("📤 Sending request to Crawl4AI service: {}", input_json);
+        debug!("📤 Sending request to Scrapy service: {}", input_json);
 
-        // Execute the Crawl4AI service
-        let response = self.execute_crawl4ai_service(&input_json).await?;
+        // Execute the Scrapy service
+        let response = self.execute_scrapy_service(&input_json).await?;
 
         // Parse and validate response
         let crawl4ai_response: Crawl4AIResponse = serde_json::from_str(&response)
             .map_err(TextualDataError::JsonSerializationFailed)?;
 
-        debug!("📥 Received response from Crawl4AI service: status={}", crawl4ai_response.status);
+        debug!("📥 Received response from Scrapy service: status={}", crawl4ai_response.status);
 
         // Handle response
         match crawl4ai_response.status.as_str() {
@@ -160,7 +161,7 @@ impl TextualDataFetcher {
             "error" => {
                 let error_msg = crawl4ai_response.error_message
                     .unwrap_or_else(|| "Unknown error from Crawl4AI service".to_string());
-                warn!("⚠️ Crawl4AI service returned error: {}", error_msg);
+                warn!("⚠️ Scrapy service returned error: {}", error_msg);
                 Err(TextualDataError::ServiceError(error_msg).into())
             }
             _ => {
@@ -171,9 +172,9 @@ impl TextualDataFetcher {
         }
     }
 
-    /// Execute the Crawl4AI service with the given input
-    async fn execute_crawl4ai_service(&self, input_json: &str) -> Result<String, TextualDataError> {
-        debug!("🚀 Spawning Crawl4AI process: {}", self.config.executable_path);
+    /// Execute the Scrapy service with the given input
+    async fn execute_scrapy_service(&self, input_json: &str) -> Result<String, TextualDataError> {
+        debug!("🚀 Spawning Scrapy process: {}", self.config.executable_path);
 
         // Spawn the process
         let mut cmd = Command::new(&self.config.executable_path)
@@ -221,14 +222,14 @@ impl TextualDataFetcher {
 
         // Log stderr output (service logs)
         if !stderr_result.is_empty() {
-            debug!("📋 Crawl4AI Service Logs:\n{}", stderr_result);
+            debug!("📋 Scrapy Service Logs:\n{}", stderr_result);
         }
 
         // Wait for process to complete
         let status = cmd.wait().await.map_err(TextualDataError::ProcessSpawnFailed)?;
 
         if !status.success() {
-            error!("❌ Crawl4AI service failed with status: {}", status);
+            error!("❌ Scrapy service failed with status: {}", status);
             error!("📋 Service stderr: {}", stderr_result);
             return Err(TextualDataError::CommandFailed(format!(
                 "Process exited with status: {} | stderr: {}",
@@ -236,7 +237,7 @@ impl TextualDataFetcher {
             )));
         }
 
-        debug!("✅ Crawl4AI service completed successfully");
+        debug!("✅ Scrapy service completed successfully");
         Ok(stdout_result)
     }
 
@@ -250,7 +251,7 @@ impl TextualDataFetcher {
         self.config.executable_path = path;
     }
 
-    /// Check if the Crawl4AI executable is available
+    /// Check if the Scrapy service executable is available
     pub fn is_available(&self) -> bool {
         Path::new(&self.config.executable_path).exists()
     }

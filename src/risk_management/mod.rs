@@ -367,6 +367,7 @@ mod tests {
     use super::*;
     use crate::models::{SignalType, StrategySignal};
     use chrono::Utc;
+    use std::collections::HashMap;
 
     fn create_test_config() -> RiskManagementConfig {
         RiskManagementConfig {
@@ -388,6 +389,7 @@ mod tests {
             positions: Vec::new(),
             daily_pnl: 0.0,
             max_drawdown: 0.0,
+            total_value_usd: Some(10000.0),
             updated_at: Utc::now(),
         }
     }
@@ -435,7 +437,7 @@ mod tests {
             risk_score: 0.3,
             target_price: Some(52000.0),
             stop_loss_price: Some(48000.0),
-            strategy_parameters: serde_json::json!({}),
+            strategy_parameters: HashMap::new(),
         };
 
         let assessment = risk_manager.assess_signal_with_ai(&signal, &portfolio, Some(&ai_recommendation)).await;
@@ -444,7 +446,7 @@ mod tests {
         let assessment = assessment.unwrap();
         assert!(assessment.approved);
         assert!(assessment.risk_score >= 0.0 && assessment.risk_score <= 1.0);
-        assert!(assessment.target_price.is_some());
+        assert!(assessment.take_profit.is_some());
         assert!(assessment.stop_loss.is_some());
     }
 
@@ -463,7 +465,7 @@ mod tests {
             risk_score: 0.9,
             target_price: None,
             stop_loss_price: None,
-            strategy_parameters: serde_json::json!({}),
+            strategy_parameters: HashMap::new(),
         };
 
         let assessment = risk_manager.assess_signal_with_ai(&signal, &portfolio, Some(&ai_recommendation)).await;

@@ -620,6 +620,7 @@ mod tests {
 
         let portfolio = Portfolio {
             total_value: 10000.0,
+            total_value_usd: Some(10000.0),
             available_balance: 5000.0,
             unrealized_pnl: 0.0,
             realized_pnl: 0.0,

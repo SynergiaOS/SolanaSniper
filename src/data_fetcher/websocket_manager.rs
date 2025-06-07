@@ -350,7 +350,11 @@ mod tests {
         assert!(event.is_ok());
         
         let event = event.unwrap();
-        assert_eq!(event.symbol, "BTCUSDT");
-        assert!(matches!(event.event_type, MarketEventType::PriceUpdate));
+        match event {
+            MarketEvent::PriceUpdate { symbol, .. } => {
+                assert_eq!(symbol, "BTCUSDT");
+            }
+            _ => panic!("Expected PriceUpdate event"),
+        }
     }
 }

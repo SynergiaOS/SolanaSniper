@@ -231,9 +231,13 @@ mod tests {
     fn create_test_config() -> SolanaConfig {
         SolanaConfig {
             rpc_url: "https://devnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}".to_string(),
-            enhanced_rpc_url: "https://api.helius.xyz/v0/addresses".to_string(),
-            commitment: "confirmed".to_string(),
-            timeout_seconds: 30,
+            websocket_url: "wss://devnet.helius-rpc.com".to_string(),
+            api_key: Some("test-api-key".to_string()),
+            connection_timeout_seconds: 30,
+            request_timeout_seconds: 10,
+            private_key: None,
+            wallet_path: None,
+            public_key: None,
         }
     }
 
@@ -241,7 +245,7 @@ mod tests {
     async fn test_solana_data_fetcher_creation() {
         let config = create_test_config();
         let api_key = "test-api-key".to_string();
-        let fetcher = SolanaDataFetcher::new(config, api_key);
+        let fetcher = SolanaDataFetcher::new(&config, api_key);
         assert!(fetcher.is_ok());
     }
 
@@ -249,7 +253,7 @@ mod tests {
     async fn test_health_check() {
         let config = create_test_config();
         let api_key = "test-api-key".to_string();
-        if let Ok(_fetcher) = SolanaDataFetcher::new(config, api_key) {
+        if let Ok(_fetcher) = SolanaDataFetcher::new(&config, api_key) {
             // Skip actual health check test due to blocking runtime issues
             // This test just verifies the struct can be created
             assert!(true);

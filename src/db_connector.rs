@@ -102,11 +102,11 @@ impl DbClient {
             .map_err(|e| format!("Serialization failed: {}", e))?;
 
         if let Some(ttl) = ttl_secs {
-            conn.set_ex(key, serialized, ttl)
+            conn.set_ex::<_, _, ()>(key, serialized, ttl)
                 .await
                 .map_err(|e| format!("Redis SET_EX failed: {}", e))?;
         } else {
-            conn.set(key, serialized)
+            conn.set::<_, _, ()>(key, serialized)
                 .await
                 .map_err(|e| format!("Redis SET failed: {}", e))?;
         }

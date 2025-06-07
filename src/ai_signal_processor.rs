@@ -1,11 +1,11 @@
 use crate::models::{
-    StrategySignal, AIEnhancedSignal, AIRecommendation, TradingResult, TradingError,
+    StrategySignal, AIEnhancedSignal, AIRecommendation, TradingResult,
     TokenInfo, AggregatedAnalytics, MarketConditions, PortfolioState
 };
 use crate::ai_decision_engine::AIDecisionEngine;
 use serde_json::json;
 use chrono::Utc;
-use tracing::{debug, info, warn, instrument};
+use tracing::{info, warn, instrument};
 use std::sync::Arc;
 
 /// AI Signal Processor that enhances strategy signals with AI analysis
@@ -259,7 +259,7 @@ impl AISignalProcessor {
     fn build_market_conditions(
         &self,
         _signal: &StrategySignal,
-        market_context: &Option<serde_json::Value>,
+        _market_context: &Option<serde_json::Value>,
     ) -> MarketConditions {
         MarketConditions {
             volatility: 0.5,

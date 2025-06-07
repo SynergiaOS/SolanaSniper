@@ -85,6 +85,7 @@ pub trait EnhancedStrategy: Send + Sync {
             MarketEvent::NewTransaction { .. } => true,
             MarketEvent::LiquidityUpdate { .. } => true,
             MarketEvent::NewTokenListing { .. } => true,
+            MarketEvent::NewPoolCreated { .. } => true, // Very interesting for sniping strategies
             MarketEvent::WhaleAlert { .. } => true,
             MarketEvent::ConnectionStatus { .. } => false, // Usually not interesting for trading
             MarketEvent::RawMessage { .. } => false, // Usually not interesting for trading
@@ -92,7 +93,7 @@ pub trait EnhancedStrategy: Send + Sync {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum StrategyType {
     Sniping,
     Arbitrage,
@@ -293,6 +294,7 @@ mod tests {
 
         let portfolio = Portfolio {
             total_value: 10000.0,
+            total_value_usd: Some(10000.0),
             available_balance: 5000.0,
             unrealized_pnl: 0.0,
             realized_pnl: 0.0,

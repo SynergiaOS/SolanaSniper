@@ -309,26 +309,24 @@ mod tests {
     #[tokio::test]
     async fn test_jupiter_client_creation() {
         let config = JupiterConfig {
-            api_url: "https://quote-api.jup.ag/v6".to_string(),
-            swap_url: "https://quote-api.jup.ag/v6/swap".to_string(),
-            price_url: "https://price.jup.ag/v4/price".to_string(),
+            api_base_url: "https://quote-api.jup.ag/v6".to_string(),
+            slippage_bps: 50,
+            max_accounts: 64,
             timeout_seconds: 10,
-            max_retries: 3,
         };
-        let client = JupiterClient::new(config);
+        let client = JupiterClient::new(&config);
         assert!(client.is_ok());
     }
 
     #[test]
     fn test_calculate_effective_price() {
         let config = JupiterConfig {
-            api_url: "https://quote-api.jup.ag/v6".to_string(),
-            swap_url: "https://quote-api.jup.ag/v6/swap".to_string(),
-            price_url: "https://price.jup.ag/v4/price".to_string(),
+            api_base_url: "https://quote-api.jup.ag/v6".to_string(),
+            slippage_bps: 50,
+            max_accounts: 64,
             timeout_seconds: 10,
-            max_retries: 3,
         };
-        let client = JupiterClient::new(config).unwrap();
+        let client = JupiterClient::new(&config).unwrap();
         let quote = JupiterQuoteResponse {
             input_mint: "So11111111111111111111111111111111111111112".to_string(),
             in_amount: "1000000000".to_string(), // 1 SOL

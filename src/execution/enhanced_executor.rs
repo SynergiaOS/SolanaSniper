@@ -1,5 +1,6 @@
 use crate::execution::{balance_manager::BalanceManager, EnhancedOrderExecutor, JitoExecutor, JupiterExecutor};
 use crate::models::{ExecutionResult, Order, OrderStatus, TradingError, TradingResult};
+use crate::config::JitoConfig;
 use async_trait::async_trait;
 use solana_sdk::signature::{Keypair, Signer};
 use tracing::{info, warn};
@@ -16,15 +17,16 @@ impl SniperBotExecutor {
         rpc_url: &str,
         helius_api_key: String,
         wallet_keypair: Keypair,
+        jito_config: &JitoConfig,
         dry_run: bool,
     ) -> TradingResult<Self> {
         // Create Jupiter executor
         let mut jupiter_executor = JupiterExecutor::new(rpc_url, None)?;
         jupiter_executor.set_wallet_keypair(wallet_keypair.insecure_clone());
 
-        // Create Jito executor - TODO: Fix with proper config
-        // let mut jito_executor = JitoExecutor::new(rpc_url, None)?;
-        // jito_executor.set_wallet_keypair(wallet_keypair.insecure_clone());
+        // Create Jito executor with proper config
+        let mut jito_executor = JitoExecutor::new(jito_config, rpc_url)?;
+        jito_executor.set_wallet_keypair(wallet_keypair.insecure_clone());
 
         // Create balance manager
         let balance_manager = BalanceManager::new(
@@ -33,14 +35,7 @@ impl SniperBotExecutor {
             helius_api_key,
         )?;
 
-        // TODO: Create a dummy jito_executor for now
-        let dummy_jito_config = crate::config::JitoConfig {
-            block_engine_url: "https://mainnet.block-engine.jito.wtf".to_string(),
-            tip_lamports: 10000,
-            enabled: true,
-            bundle_timeout_seconds: 30,
-        };
-        let jito_executor = JitoExecutor::new(&dummy_jito_config, rpc_url)?;
+        info!("✅ SniperBotExecutor initialized with MEV protection: {}", jito_config.enabled);
 
         Ok(Self {
             jupiter_executor,
@@ -230,9 +225,9 @@ impl EnhancedOrderExecutor for SniperBotExecutor {
 
     async fn execute_order_with_mev_protection(&self, order: &Order) -> TradingResult<ExecutionResult> {
         if self.dry_run {
-            info!("DRY RUN: Would execute order {} with MEV protection for {} {} of {}", 
+            info!("DRY RUN: Would execute order {} with MEV protection for {} {} of {}",
                 order.id, order.side, order.size, order.symbol);
-            
+
             return Ok(ExecutionResult {
                 order_id: order.id,
                 success: true,
@@ -248,7 +243,7 @@ impl EnhancedOrderExecutor for SniperBotExecutor {
             });
         }
 
-        info!("Executing order {} with MEV protection via Jito", order.id);
+        info!("🛡️ Executing order {} with MEV protection via Jito bundles", order.id);
 
         // Validate execution
         self.validate_execution(order).await?;
@@ -256,24 +251,36 @@ impl EnhancedOrderExecutor for SniperBotExecutor {
         // Lock funds
         self.lock_order_funds(order).await?;
 
-        // First get the transaction from Jupiter
-        let jupiter_result = match self.jupiter_executor.execute_order(order).await {
-            Ok(result) => result,
+        // Step 1: Get transaction from Jupiter (but don't execute it)
+        let transaction = self.jupiter_executor.create_transaction_for_order(order).await.map_err(|e| {
+            warn!("Failed to create Jupiter transaction for MEV protection: {}", e);
+            e
+        })?;
+
+        // Step 2: Execute via Jito bundle for MEV protection
+        let jito_result = match self.jito_executor.execute_order_with_mev_protection(order, transaction).await {
+            Ok(result) => {
+                info!("✅ MEV-protected execution successful via Jito bundle");
+                result
+            },
             Err(e) => {
-                // If Jupiter fails, try Jito directly
-                warn!("Jupiter execution failed, trying Jito: {}", e);
-                
-                // For now, return the error. In a full implementation,
-                // we would create the transaction manually and send via Jito
-                self.unlock_order_funds(order, 0.0).await?;
-                return Err(e);
+                warn!("❌ Jito bundle execution failed, falling back to regular Jupiter: {}", e);
+
+                // Fallback to regular Jupiter execution
+                let fallback_result = self.jupiter_executor.execute_order(order).await?;
+                warn!("⚠️ Executed via Jupiter fallback (no MEV protection)");
+
+                // Unlock funds and return fallback result
+                self.unlock_order_funds(order, fallback_result.filled_size).await?;
+                return Ok(fallback_result);
             }
         };
 
         // Unlock funds based on execution result
-        self.unlock_order_funds(order, jupiter_result.filled_size).await?;
+        self.unlock_order_funds(order, jito_result.filled_size).await?;
 
-        Ok(jupiter_result)
+        info!("🎯 MEV-protected order {} completed successfully", order.id);
+        Ok(jito_result)
     }
 
     fn supports_mev_protection(&self) -> bool {
@@ -297,9 +304,10 @@ impl ExecutorFactory {
         rpc_url: &str,
         helius_api_key: String,
         wallet_keypair: Keypair,
+        jito_config: &JitoConfig,
         dry_run: bool,
     ) -> TradingResult<SniperBotExecutor> {
-        SniperBotExecutor::new(rpc_url, helius_api_key, wallet_keypair, dry_run)
+        SniperBotExecutor::new(rpc_url, helius_api_key, wallet_keypair, jito_config, dry_run)
     }
 
     pub fn create_jupiter_only_executor(
@@ -314,14 +322,9 @@ impl ExecutorFactory {
     pub fn create_jito_only_executor(
         rpc_url: &str,
         wallet_keypair: Keypair,
+        jito_config: &JitoConfig,
     ) -> TradingResult<JitoExecutor> {
-        let dummy_jito_config = crate::config::JitoConfig {
-            block_engine_url: "https://mainnet.block-engine.jito.wtf".to_string(),
-            tip_lamports: 10000,
-            enabled: true,
-            bundle_timeout_seconds: 30,
-        };
-        let mut executor = JitoExecutor::new(&dummy_jito_config, rpc_url)?;
+        let mut executor = JitoExecutor::new(jito_config, rpc_url)?;
         executor.set_wallet_keypair(wallet_keypair);
         Ok(executor)
     }
@@ -337,10 +340,12 @@ mod tests {
     #[tokio::test]
     async fn test_executor_creation() {
         let keypair = Keypair::new();
+        let jito_config = JitoConfig::default();
         let executor = SniperBotExecutor::new(
             "https://api.mainnet-beta.solana.com",
             "test-api-key".to_string(),
             keypair,
+            &jito_config,
             true, // dry run
         );
         assert!(executor.is_ok());
@@ -349,10 +354,12 @@ mod tests {
     #[tokio::test]
     async fn test_dry_run_execution() {
         let keypair = Keypair::new();
+        let jito_config = JitoConfig::default();
         let executor = SniperBotExecutor::new(
             "https://api.mainnet-beta.solana.com",
             "test-api-key".to_string(),
             keypair,
+            &jito_config,
             true, // dry run
         ).unwrap();
 
@@ -393,10 +400,12 @@ mod tests {
     #[test]
     fn test_mev_protection_decision() {
         let keypair = Keypair::new();
+        let jito_config = JitoConfig::default();
         let executor = SniperBotExecutor::new(
             "https://api.mainnet-beta.solana.com",
             "test-api-key".to_string(),
             keypair,
+            &jito_config,
             true,
         ).unwrap();
 

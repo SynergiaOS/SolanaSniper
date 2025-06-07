@@ -1,282 +1,181 @@
-use crate::config::AppConfig;
-use crate::data_fetcher::realtime_websocket_manager::RealtimeWebSocketManager;
-use crate::data_fetcher::data_aggregator::AggregatedMarketData;
-use crate::models::{MarketEvent, StrategySignal, Portfolio, TradingResult, TradingError, MarketData, DataSource};
-use crate::strategy::{
-    StrategyManager, StrategyContext, PumpFunSnipingStrategy, LiquidityPoolSnipingStrategy,
-    MarketConditions, VolumeTrend, PriceMomentum
-};
-use chrono::Utc;
-use std::sync::Arc;
-use std::time::Duration;
-use tokio::sync::{mpsc, RwLock};
-use tokio::time::interval;
-use tracing::{info, warn, error, debug, instrument};
+//! Live Trading Engine for SniperBot 2.0
+//! 
+//! This module coordinates real-time market data, strategy execution, and order management.
+//! It serves as the central orchestrator for live trading operations.
+//! 
+//! The LiveTradingEngine is now a proper library component that can be imported
+//! and used by binary executables. It follows the correct Rust architecture pattern.
 
-/// Live Trading Engine that coordinates WebSocket data, strategies, and execution
+use crate::{
+    config::AppConfig,
+    models::{TradingResult, TradingError, StrategySignal, SignalType, Order},
+    execution::{SniperBotExecutor, EnhancedOrderExecutor},
+};
+use crate::position_management::{PositionManager, ActivePosition};
+use std::sync::Arc;
+use tokio::sync::mpsc;
+use tracing::{info, error, debug, instrument};
+
+/// Live Trading Engine - The Heart of SniperBot 2.0
+/// 
+/// This is the central orchestrator that receives trading decisions and executes them.
+/// It follows the proper Rust library pattern - it's a component that can be imported
+/// and used by binary executables.
 pub struct LiveTradingEngine {
+    /// Channel for receiving trading decisions from strategies
+    decision_receiver: mpsc::Receiver<StrategySignal>,
+    /// Trading executor for order execution
+    trading_executor: SniperBotExecutor,
+    /// Position manager for tracking active positions
+    position_manager: PositionManager,
+    /// Configuration
     config: AppConfig,
-    websocket_manager: RealtimeWebSocketManager,
-    strategy_manager: StrategyManager,
-    portfolio: Arc<RwLock<Portfolio>>,
-    is_running: Arc<std::sync::atomic::AtomicBool>,
+    /// Dry run mode flag
     dry_run: bool,
 }
 
 impl LiveTradingEngine {
-    /// Create new live trading engine
-    pub fn new(config: AppConfig, dry_run: bool) -> TradingResult<Self> {
-        // Create channels for communication
-        let (market_event_sender, _market_event_receiver) = mpsc::channel::<MarketEvent>(1000);
-        let (signal_sender, _signal_receiver) = mpsc::channel::<StrategySignal>(100);
-
-        // Create WebSocket manager
-        let websocket_manager = RealtimeWebSocketManager::new(
-            config.websocket.clone(),
-            market_event_sender,
-        );
-
-        // Create strategy manager
-        let strategy_manager = StrategyManager::new(signal_sender);
-
-        // Initialize portfolio
-        let portfolio = Arc::new(RwLock::new(Portfolio {
-            total_value: config.trading.initial_balance,
-            total_value_usd: Some(config.trading.initial_balance),
-            available_balance: config.trading.initial_balance,
-            unrealized_pnl: 0.0,
-            realized_pnl: 0.0,
-            positions: vec![],
-            daily_pnl: 0.0,
-            max_drawdown: 0.0,
-            updated_at: Utc::now(),
-        }));
-
-        Ok(Self {
+    /// Create new live trading engine with dependency injection
+    pub fn new(
+        decision_receiver: mpsc::Receiver<StrategySignal>,
+        trading_executor: SniperBotExecutor,
+        position_manager: PositionManager,
+        config: AppConfig,
+        dry_run: bool,
+    ) -> Self {
+        Self {
+            decision_receiver,
+            trading_executor,
+            position_manager,
             config,
-            websocket_manager,
-            strategy_manager,
-            portfolio,
-            is_running: Arc::new(std::sync::atomic::AtomicBool::new(false)),
             dry_run,
-        })
+        }
     }
 
-    /// Start the live trading engine
+    /// Main execution loop - this is the heart of the trading engine
+    /// 
+    /// This method should be called from a binary executable and will run indefinitely,
+    /// processing trading signals and executing orders.
     #[instrument(skip(self))]
-    pub async fn start(&self) -> TradingResult<()> {
-        if self.is_running.load(std::sync::atomic::Ordering::SeqCst) {
-            return Err(TradingError::ConfigError("Engine already running".to_string()));
-        }
-
-        self.is_running.store(true, std::sync::atomic::Ordering::SeqCst);
-
-        info!("🚀 Starting SniperBot 2.0 Live Trading Engine");
+    pub async fn run(&mut self) -> TradingResult<()> {
+        info!("🚀 Live Trading Engine: AKTYWNY. Oczekiwanie na decyzje handlowe...");
         info!("💰 Mode: {}", if self.dry_run { "DRY RUN" } else { "LIVE TRADING" });
-        info!("💵 Initial Balance: ${:.2}", self.config.trading.initial_balance);
-
-        // Initialize strategies
-        self.initialize_strategies().await?;
-
-        // Create channels for internal communication
-        let (market_event_sender, mut market_event_receiver) = mpsc::channel::<MarketEvent>(1000);
-        let (signal_sender, mut signal_receiver) = mpsc::channel::<StrategySignal>(100);
-
-        // Start WebSocket manager
-        let ws_manager = RealtimeWebSocketManager::new(
-            self.config.websocket.clone(),
-            market_event_sender,
-        );
-
-        let ws_handle = tokio::spawn(async move {
-            if let Err(e) = ws_manager.start().await {
-                error!("WebSocket manager failed: {}", e);
-            }
-        });
-
-        // Start strategy manager with new signal sender
-        let strategy_manager = Arc::new(StrategyManager::new(signal_sender));
-        self.initialize_strategies_for_manager(&strategy_manager).await?;
-
-        // Start periodic analysis task
-        let periodic_analysis_handle = self.start_periodic_analysis(strategy_manager.clone()).await;
-
-        // Start market event processing task
-        let portfolio_clone = self.portfolio.clone();
-        let strategy_manager_clone = strategy_manager.clone();
-        let market_event_handle = tokio::spawn(async move {
-            Self::process_market_events(
-                &mut market_event_receiver,
-                &strategy_manager_clone,
-                &portfolio_clone,
-            ).await;
-        });
-
-        // Start signal processing task
-        let signal_processing_handle = tokio::spawn(async move {
-            Self::process_trading_signals(&mut signal_receiver).await;
-        });
-
-        info!("✅ Live Trading Engine started successfully");
-
-        // Wait for all tasks to complete (they should run indefinitely)
-        tokio::select! {
-            _ = ws_handle => warn!("WebSocket manager stopped"),
-            _ = market_event_handle => warn!("Market event processor stopped"),
-            _ = signal_processing_handle => warn!("Signal processor stopped"),
-            _ = periodic_analysis_handle => warn!("Periodic analysis stopped"),
-        }
-
-        Ok(())
-    }
-
-    /// Stop the live trading engine
-    pub fn stop(&self) {
-        info!("🛑 Stopping Live Trading Engine");
-        self.is_running.store(false, std::sync::atomic::Ordering::SeqCst);
-        self.websocket_manager.stop();
-    }
-
-    /// Initialize trading strategies
-    pub async fn initialize_strategies(&self) -> TradingResult<()> {
-        info!("📊 Initializing trading strategies");
-
-        // Add PumpFun sniping strategy
-        let pumpfun_strategy = Box::new(PumpFunSnipingStrategy::new("pumpfun_sniping".to_string()));
-        self.strategy_manager.add_strategy(pumpfun_strategy).await?;
-
-        // Add Liquidity Pool sniping strategy
-        let liquidity_strategy = Box::new(LiquidityPoolSnipingStrategy::new("liquidity_sniping".to_string()));
-        self.strategy_manager.add_strategy(liquidity_strategy).await?;
-
-        info!("✅ Strategies initialized: {:?}", self.strategy_manager.get_all_strategies().await);
-        Ok(())
-    }
-
-    /// Initialize strategies for a specific strategy manager
-    async fn initialize_strategies_for_manager(&self, strategy_manager: &Arc<StrategyManager>) -> TradingResult<()> {
-        info!("📊 Initializing strategies for manager");
-
-        // Add PumpFun sniping strategy
-        let pumpfun_strategy = Box::new(PumpFunSnipingStrategy::new("pumpfun_sniping".to_string()));
-        strategy_manager.add_strategy(pumpfun_strategy).await?;
-
-        // Add Liquidity Pool sniping strategy
-        let liquidity_strategy = Box::new(LiquidityPoolSnipingStrategy::new("liquidity_sniping".to_string()));
-        strategy_manager.add_strategy(liquidity_strategy).await?;
-
-        info!("✅ Strategies initialized for manager");
-        Ok(())
-    }
-
-    /// Start periodic analysis task
-    async fn start_periodic_analysis(&self, strategy_manager: Arc<StrategyManager>) -> tokio::task::JoinHandle<()> {
-        let portfolio = self.portfolio.clone();
-        let is_running = self.is_running.clone();
-        let analysis_interval = Duration::from_secs(self.config.trading.analysis_interval_seconds);
-
-        tokio::spawn(async move {
-            let mut interval = interval(analysis_interval);
-            
-            while is_running.load(std::sync::atomic::Ordering::SeqCst) {
-                interval.tick().await;
-                
-                debug!("🔄 Running periodic analysis");
-                
-                // Create mock context for periodic analysis
-                let context = Self::create_mock_strategy_context(&portfolio).await;
-                
-                match strategy_manager.run_periodic_analysis(&context).await {
-                    Ok(signals) => {
-                        if !signals.is_empty() {
-                            info!("📈 Periodic analysis generated {} signals", signals.len());
-                        }
-                    }
-                    Err(e) => {
-                        warn!("Periodic analysis error: {}", e);
-                    }
-                }
-            }
-            
-            info!("⏹️ Periodic analysis task stopped");
-        })
-    }
-
-    /// Process market events and generate trading signals
-    async fn process_market_events(
-        event_receiver: &mut mpsc::Receiver<MarketEvent>,
-        strategy_manager: &Arc<StrategyManager>,
-        portfolio: &Arc<RwLock<Portfolio>>,
-    ) {
-        info!("📡 Starting market event processor");
         
-        while let Some(event) = event_receiver.recv().await {
-            debug!("📨 Processing market event: {:?}", std::mem::discriminant(&event));
-            
-            // Create strategy context from current portfolio state
-            let context = Self::create_mock_strategy_context(portfolio).await;
-            
-            // Process event through strategy manager
-            match strategy_manager.process_market_event(&event, &context).await {
-                Ok(signals) => {
-                    if !signals.is_empty() {
-                        info!("🎯 Market event generated {} signals", signals.len());
-                        for signal in signals {
-                            info!("📊 Signal: {} {} {} @ ${:.6} (strength: {:.2})", 
-                                signal.strategy, signal.signal_type, signal.symbol, signal.price, signal.strength);
-                        }
-                    }
-                }
-                Err(e) => {
-                    warn!("Error processing market event: {}", e);
-                }
-            }
-        }
-        
-        info!("📡 Market event processor stopped");
-    }
-
-    /// Process trading signals (placeholder for execution)
-    async fn process_trading_signals(signal_receiver: &mut mpsc::Receiver<StrategySignal>) {
-        info!("⚡ Starting signal processor");
-        
-        while let Some(signal) = signal_receiver.recv().await {
-            info!("🎯 Processing signal: {} {} {} @ ${:.6} (strength: {:.2})", 
+        while let Some(signal) = self.decision_receiver.recv().await {
+            info!("🎯 Otrzymano nową decyzję handlową: {} {} {} @ ${:.6} (strength: {:.2})",
                 signal.strategy, signal.signal_type, signal.symbol, signal.price, signal.strength);
-            
-            // TODO: Integrate with execution engine
-            // For now, just log the signal
-            info!("💡 Signal would be executed here (DRY RUN mode)");
+
+            // Process the trading signal
+            if let Err(e) = self.process_trading_signal(&signal).await {
+                error!("❌ Błąd podczas przetwarzania sygnału: {}", e);
+                continue;
+            }
         }
         
-        info!("⚡ Signal processor stopped");
+        info!("🛑 Kanał decyzyjny zamknięty. Zamykanie Live Trading Engine.");
+        Ok(())
     }
 
-    /// Process a strategy signal (called from main loop)
-    pub async fn process_signal(&self, signal: StrategySignal) -> TradingResult<()> {
-        info!("🎯 Processing signal: {} {} {} @ ${:.6} (strength: {:.2})",
-              signal.strategy, signal.signal_type, signal.symbol, signal.price, signal.strength);
-
+    /// Process a single trading signal
+    async fn process_trading_signal(&mut self, signal: &StrategySignal) -> TradingResult<()> {
+        // Convert signal to order
+        let order = Self::signal_to_order(signal)?;
+        
         if self.dry_run {
-            info!("🔍 DRY RUN - Signal would be executed: {:?}", signal.metadata);
+            info!("🔍 DRY RUN: Would execute order {} for {} {} of {}",
+                order.id, order.side, order.size, order.symbol);
             return Ok(());
         }
 
-        // TODO: Integrate with actual execution engine
-        info!("💡 Signal execution not yet implemented");
+        // Execute the order
+        match self.trading_executor.execute_order(&order).await {
+            Ok(execution_result) => {
+                info!("✅ Transakcja wykonana pomyślnie. ID: {:?}", execution_result.transaction_signature);
+                
+                // Handle position management based on signal type
+                match signal.signal_type {
+                    SignalType::Buy => {
+                        // After successful BUY, add position to monitoring
+                        let active_position = ActivePosition::from_execution(&order, signal, &execution_result)?;
+                        if let Err(e) = self.position_manager.add_position(active_position).await {
+                            error!("❌ Krytyczny błąd: Nie udało się zapisać aktywnej pozycji do bazy! Błąd: {}", e);
+                        } else {
+                            info!("✅ Position added to monitoring for order {}", order.id);
+                        }
+                    }
+                    SignalType::Sell => {
+                        // After successful SELL, remove position from monitoring
+                        if let Some(position_id) = signal.metadata.get("position_id").and_then(|v| v.as_str()) {
+                            if let Err(e) = self.position_manager.remove_position(position_id).await {
+                                error!("❌ Failed to remove position from monitoring: {}", e);
+                            } else {
+                                info!("✅ Position {} removed from monitoring", position_id);
+                            }
+                        }
+                    }
+                    _ => {
+                        debug!("🔍 Signal type {:?} does not require position management", signal.signal_type);
+                    }
+                }
+            }
+            Err(e) => {
+                error!("❌ Błąd podczas wykonywania transakcji: {}", e);
+                return Err(e);
+            }
+        }
+
         Ok(())
     }
 
-    /// Get trading engine status
-    pub async fn get_status(&self) -> EngineStatus {
+    /// Convert strategy signal to order
+    fn signal_to_order(signal: &StrategySignal) -> TradingResult<Order> {
+        use crate::models::{OrderSide, OrderType, OrderStatus, TimeInForce, ExecutionParams};
+        use uuid::Uuid;
+        use chrono::Utc;
+
+        let order_side = match signal.signal_type {
+            SignalType::Buy => OrderSide::Buy,
+            SignalType::Sell => OrderSide::Sell,
+            _ => return Err(TradingError::InvalidOrder("Unsupported signal type".to_string())),
+        };
+
+        Ok(Order {
+            id: Uuid::new_v4(),
+            exchange_order_id: None,
+            symbol: signal.symbol.clone(),
+            side: order_side,
+            order_type: OrderType::Market,
+            size: signal.size,
+            price: Some(signal.price),
+            filled_size: 0.0,
+            average_fill_price: None,
+            status: OrderStatus::Pending,
+            exchange: "jupiter".to_string(),
+            strategy: signal.strategy.clone(),
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+            time_in_force: TimeInForce::IOC,
+            execution_params: ExecutionParams::default(),
+            stop_loss: None,
+            take_profit: None,
+            max_slippage_bps: 300, // 3% max slippage
+            actual_slippage_bps: None,
+            fees_paid: 0.0,
+            transaction_signature: None,
+            bundle_id: None,
+        })
+    }
+
+    /// Get engine status for monitoring
+    pub fn get_status(&self) -> EngineStatus {
         EngineStatus {
-            is_running: self.is_running.load(std::sync::atomic::Ordering::SeqCst),
+            is_running: true, // Simplified - in real implementation this would track actual state
             dry_run: self.dry_run,
-            portfolio_value: {
-                let portfolio = self.portfolio.read().await;
-                portfolio.total_value
-            },
-            active_strategies: 4, // Placeholder
+            processed_signals: 0, // Would be tracked in real implementation
+            successful_trades: 0, // Would be tracked in real implementation
+            failed_trades: 0, // Would be tracked in real implementation
+            active_strategies: 0, // Would be tracked in real implementation
+            portfolio_value: 0.0, // Would be tracked in real implementation
         }
     }
 }
@@ -286,65 +185,103 @@ impl LiveTradingEngine {
 pub struct EngineStatus {
     pub is_running: bool,
     pub dry_run: bool,
-    pub portfolio_value: f64,
+    pub processed_signals: u64,
+    pub successful_trades: u64,
+    pub failed_trades: u64,
     pub active_strategies: u32,
+    pub portfolio_value: f64,
 }
 
-impl LiveTradingEngine {
-    /// Create mock strategy context for testing
-    async fn create_mock_strategy_context(portfolio: &Arc<RwLock<Portfolio>>) -> StrategyContext {
-        let portfolio_state = portfolio.read().await.clone();
+/// Factory for creating LiveTradingEngine instances
+pub struct LiveTradingEngineFactory;
 
-        // Create mock market data
-        let market_data = MarketData {
-            symbol: "SOL/USDC".to_string(),
-            price: 100.0,
-            volume: 1000000.0,
-            bid: Some(99.95),
-            ask: Some(100.05),
-            timestamp: Utc::now(),
-            source: DataSource::Solana,
-        };
+impl LiveTradingEngineFactory {
+    /// Create a new LiveTradingEngine with all dependencies
+    pub async fn create(
+        config: AppConfig,
+        dry_run: bool,
+    ) -> TradingResult<(LiveTradingEngine, mpsc::Sender<StrategySignal>)> {
+        info!("🏭 Creating LiveTradingEngine with all dependencies");
 
-        let aggregated_data = AggregatedMarketData {
-            primary_data: market_data,
-            secondary_data: vec![],
-            sources_count: 1,
-            confidence_score: 0.8,
-            latency_ms: 100,
-        };
+        // Create communication channel
+        let (signal_sender, signal_receiver) = mpsc::channel::<StrategySignal>(100);
 
-        let market_conditions = MarketConditions {
-            volatility: 0.15,
-            volume_trend: VolumeTrend::Increasing,
-            price_momentum: PriceMomentum::Bullish,
-            liquidity_depth: 50000.0,
-            market_cap: Some(1000000.0),
-            age_hours: Some(12.0),
-        };
+        // Create trading executor
+        let trading_executor = Self::create_trading_executor(&config, dry_run).await?;
 
-        StrategyContext::new(aggregated_data, portfolio_state, market_conditions)
-    }
-}
+        // Create position manager
+        let position_manager = Self::create_position_manager(&config, signal_sender.clone()).await?;
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+        // Create the engine
+        let engine = LiveTradingEngine::new(
+            signal_receiver,
+            trading_executor,
+            position_manager,
+            config,
+            dry_run,
+        );
 
-    #[tokio::test]
-    async fn test_live_trading_engine_creation() {
-        let config = AppConfig::default();
-        let engine = LiveTradingEngine::new(config, true);
-        assert!(engine.is_ok());
+        info!("✅ LiveTradingEngine created successfully");
+        Ok((engine, signal_sender))
     }
 
-    #[tokio::test]
-    async fn test_strategy_initialization() {
-        let config = AppConfig::default();
-        let engine = LiveTradingEngine::new(config, true).unwrap();
-        
-        // Test that we can initialize strategies
-        let result = engine.initialize_strategies().await;
-        assert!(result.is_ok());
+    /// Create trading executor
+    async fn create_trading_executor(config: &AppConfig, dry_run: bool) -> TradingResult<SniperBotExecutor> {
+        use crate::execution::ExecutorFactory;
+        use solana_sdk::signature::Keypair;
+
+        info!("🔧 Creating trading executor");
+
+        // Get wallet keypair from config
+        let wallet_keypair = if let Some(private_key) = &config.solana.private_key {
+            let keypair_bytes = bs58::decode(private_key)
+                .into_vec()
+                .map_err(|e| TradingError::ConfigError(format!("Invalid private key: {}", e)))?;
+
+            Keypair::from_bytes(&keypair_bytes)
+                .map_err(|e| TradingError::ConfigError(format!("Failed to create keypair: {}", e)))?
+        } else {
+            return Err(TradingError::ConfigError("No wallet private key configured".to_string()));
+        };
+
+        // Get Helius API key
+        let helius_api_key = config.solana.api_key.as_ref()
+            .ok_or_else(|| TradingError::ConfigError("No Helius API key configured".to_string()))?
+            .clone();
+
+        // Create executor
+        ExecutorFactory::create_executor(
+            &config.solana.rpc_url,
+            helius_api_key,
+            wallet_keypair,
+            &config.jito,
+            dry_run,
+        )
+    }
+
+    /// Create position manager
+    async fn create_position_manager(
+        config: &AppConfig,
+        signal_sender: mpsc::Sender<StrategySignal>,
+    ) -> TradingResult<PositionManager> {
+        use crate::data_fetcher::jupiter_client::JupiterClient;
+        use redis::Client as RedisClient;
+
+        info!("🔧 Creating position manager");
+
+        // Create Redis client for DragonflyDB
+        let redis_client = RedisClient::open(config.database.dragonfly_url.clone())
+            .map_err(|e| TradingError::DataError(format!("Failed to create Redis client: {}", e)))?;
+
+        // Create Jupiter client for price fetching
+        let jupiter_client = Arc::new(JupiterClient::new(&config.jupiter)?);
+
+        // Create Position Manager
+        Ok(PositionManager::new(
+            config.clone(),
+            redis_client,
+            jupiter_client,
+            signal_sender,
+        ))
     }
 }

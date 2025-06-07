@@ -1,5 +1,5 @@
 import React from 'react';
-import { Activity, TrendingUp, DollarSign, Zap, BarChart3, Settings } from 'lucide-react';
+import { Activity, TrendingUp, DollarSign, Zap, BarChart3, Settings, Target, Radio, Wallet } from 'lucide-react';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -10,8 +10,11 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, activeSection, onSectionChange }) => {
   const navigationItems = [
     { id: 'status', name: 'Bot Status', icon: Activity },
+    { id: 'portfolio', name: 'Portfolio', icon: Wallet },
     { id: 'signals', name: 'Live Signals', icon: Zap },
     { id: 'trades', name: 'Trade History', icon: DollarSign },
+    { id: 'positions', name: 'Active Positions', icon: Target },
+    { id: 'events', name: 'Live Events', icon: Radio },
     { id: 'performance', name: 'Performance', icon: TrendingUp },
     { id: 'analytics', name: 'Analytics', icon: BarChart3 },
     { id: 'settings', name: 'Settings', icon: Settings },

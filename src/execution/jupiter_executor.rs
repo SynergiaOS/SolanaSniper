@@ -398,6 +398,33 @@ impl JupiterExecutor {
         })
     }
 
+    /// Public method to get Jupiter quote for MEV protection workflow
+    pub async fn get_quote_for_order(&self, order: &Order) -> TradingResult<JupiterQuoteResponse> {
+        let (input_mint, output_mint) = self.parse_symbol(&order.symbol)?;
+        self.get_jupiter_quote(&input_mint, &output_mint, order.size, order.max_slippage_bps).await
+    }
+
+    /// Public method to create transaction for MEV protection workflow
+    pub async fn create_transaction_for_order(&self, order: &Order) -> TradingResult<VersionedTransaction> {
+        let wallet_keypair = self.wallet_keypair.as_ref()
+            .ok_or_else(|| TradingError::InvalidOrder("Wallet keypair not set".to_string()))?;
+
+        // Get quote
+        let quote = self.get_quote_for_order(order).await?;
+
+        // Get swap transaction
+        let swap_response = self.get_swap_transaction(&quote, wallet_keypair).await?;
+
+        // Decode the transaction
+        let transaction_bytes = base64::engine::general_purpose::STANDARD.decode(&swap_response.swap_transaction)
+            .map_err(|e| TradingError::DataError(format!("Failed to decode transaction: {}", e)))?;
+
+        let transaction: VersionedTransaction = bincode::deserialize(&transaction_bytes)
+            .map_err(|e| TradingError::DataError(format!("Failed to deserialize transaction: {}", e)))?;
+
+        Ok(transaction)
+    }
+
     pub async fn get_wallet_balance(&self, wallet_pubkey: &Pubkey) -> TradingResult<WalletBalance> {
         // Get SOL balance
         let sol_balance = self.rpc_client
