@@ -43,8 +43,8 @@ impl PumpFunSnipingStrategy {
             name,
             config: StrategyConfig {
                 enabled: true,
-                confidence_threshold: 0.75,
-                max_position_size: 500.0, // Conservative for meme tokens
+                confidence_threshold: 0.4, // 🧪 TEMPORARY: Lowered for testing (was 0.75)
+                max_position_size: 0.05, // 🚀 LIVE TRADING: Small amounts for testing (0.05 SOL)
                 stop_loss_percentage: 15.0, // Higher stop loss for volatile tokens
                 take_profit_percentage: 50.0, // Higher take profit for meme potential
                 cooldown_seconds: 300, // 5 minute cooldown between signals

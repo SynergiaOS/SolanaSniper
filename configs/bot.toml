@@ -101,7 +101,7 @@ health_check_port = 8080
 # WebSocket Configuration for Real-Time Data
 [websocket]
 enabled = true
-helius_ws_url = "wss://mainnet.helius-rpc.com/?api-key=40a78e4c-bdd0-4338-877a-aa7d56a5f5a0"
+helius_ws_url = "wss://atlas-mainnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}"
 binance_ws_url = "wss://stream.binance.com:9443/ws"
 reconnect_timeout_seconds = 5
 max_retries = 10

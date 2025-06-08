@@ -17,6 +17,13 @@ pub async fn create_app() -> Router {
 
     Router::new()
         .route("/health", get(handlers::health::health_check))
+        // Strategy endpoints (MOVED TO TOP TO AVOID CONFLICTS)
+        .route("/api/strategies", get(|| async {
+            tracing::info!("🎯 /api/strategies endpoint called via routing!");
+            handlers::strategies::get_strategies().await
+        }))
+        .route("/api/strategy/:strategy/toggle", post(handlers::strategies::toggle_strategy))
+        .route("/api/strategy/reset", post(handlers::strategies::reset_strategies))
         .route("/api/v1/status", get(handlers::status::get_bot_status))
         .route("/api/v1/portfolio", get(handlers::portfolio::get_portfolio))
         .route("/api/v1/orders", get(handlers::orders::get_orders))
@@ -43,9 +50,6 @@ pub async fn create_app() -> Router {
         // AI endpoints
         .route("/api/ai/analyze", post(handlers::status::ai_analyze))
         .route("/api/ai/toggle", post(handlers::status::ai_toggle))
-        // Strategy endpoints
-        .route("/api/strategy/:strategy/toggle", post(handlers::strategies::toggle_strategy))
-        .route("/api/strategy/reset", post(handlers::strategies::reset_strategies))
         // Position management endpoints (CRITICAL SAFETY FEATURES)
         .route("/api/positions", get(handlers::positions::get_active_positions))
         .route("/api/positions/:id", get(handlers::positions::get_position_details))
@@ -53,8 +57,8 @@ pub async fn create_app() -> Router {
         .route("/api/positions/emergency-close-all", post(handlers::positions::emergency_close_all_positions))
         // Live event stream (BOT INTELLIGENCE VISIBILITY)
         .route("/api/live-events", get(handlers::live_events::get_live_events))
-        // Serve static frontend files
-        .nest_service("/", ServeDir::new("frontend/dist").fallback(ServeDir::new("frontend/dist/index.html")))
+        // Serve static frontend files (MUST BE LAST TO AVOID CONFLICTS)
+        .fallback_service(ServeDir::new("frontend/dist").fallback(ServeDir::new("frontend/dist/index.html")))
         .with_state(state)
         .layer(CorsLayer::permissive())
         .layer(TraceLayer::new_for_http())

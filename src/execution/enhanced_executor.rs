@@ -56,6 +56,17 @@ impl SniperBotExecutor {
         handles
     }
 
+    /// Get current SOL balance
+    pub async fn get_sol_balance(&self) -> TradingResult<f64> {
+        Ok(self.balance_manager.get_available_balance("So11111111111111111111111111111111111111112").await)
+    }
+
+    /// Get current total portfolio value in USD
+    pub async fn get_portfolio_value_usd(&self) -> TradingResult<f64> {
+        let balance = self.balance_manager.get_cached_balance().await;
+        Ok(balance.total_value_usd)
+    }
+
     /// Pre-execution validation
     async fn validate_execution(&self, order: &Order) -> TradingResult<()> {
         // Check order status

@@ -11,11 +11,11 @@ use sniper_bot::{
     config::AppConfig,
     utils::logging,
     data_fetcher::{
-        realtime_websocket_manager::{RealtimeWebSocketManager, ConnectionStatus},
+        realtime_websocket_manager::RealtimeWebSocketManager,
         data_aggregator::DataAggregator,
         market_scanner::{MarketScanner, PotentialOpportunity},
     },
-    models::{MarketEvent, StrategySignal, Portfolio},
+    models::{MarketEvent, StrategySignal, Portfolio, TransactionType},
     risk_management::RiskManager,
     strategy::{
         strategy_manager::StrategyManager,
@@ -26,13 +26,13 @@ use sniper_bot::{
         volume_spike_strategy::VolumeSpikeStrategy,
         pure_sniper_strategy::PureSniperStrategy,
     },
-    live_trading_engine::{LiveTradingEngine, LiveTradingEngineFactory, EngineStatus},
+    live_trading_engine::{LiveTradingEngine, LiveTradingEngineFactory},
     ai_decision_engine::{AIDecisionEngine, AIConfig},
     ai_signal_processor::AISignalProcessor,
     utils::reporter::{Reporter, ReporterConfig},
     dragonfly_manager::DragonflyManager,
 };
-use config::Config;
+
 
 
 
@@ -77,6 +77,12 @@ async fn main() -> Result<()> {
             std::env::set_var("DASHBOARD_URL", "http://localhost:8084/api/report_event");
         }
     }
+
+    // Debug: Check DRAGONFLY_URL
+    match std::env::var("DRAGONFLY_URL") {
+        Ok(url) => eprintln!("🔍 DRAGONFLY_URL after .env load: {}", url),
+        Err(_) => eprintln!("❌ DRAGONFLY_URL not found after .env load"),
+    }
     match std::env::var("HELIUS_API_KEY") {
         Ok(key) => eprintln!("🔍 HELIUS_API_KEY after .env load: {}...", &key[..10]),
         Err(_) => eprintln!("❌ HELIUS_API_KEY not found after .env load"),
@@ -108,8 +114,15 @@ async fn main() -> Result<()> {
     info!("✅ Configuration loaded successfully");
 
     // Initialize bot components
-    let bot = SniperBot::new(config, args.dry_run, args.paper_trading).await?;
-    
+    let (bot, mut trading_engine) = SniperBot::new(config, args.dry_run, args.paper_trading).await?;
+
+    // Start Live Trading Engine in background
+    tokio::spawn(async move {
+        if let Err(e) = trading_engine.run().await {
+            error!("❌ Live Trading Engine error: {}", e);
+        }
+    });
+
     // Start the bot
     info!("🚀 Starting SniperBot main loop...");
     bot.run().await?;
@@ -126,7 +139,6 @@ pub struct SniperBot {
     websocket_manager: Arc<RealtimeWebSocketManager>,
     data_aggregator: Arc<DataAggregator>,
     strategy_manager: Arc<StrategyManager>,
-    trading_engine: Arc<LiveTradingEngine>,
     risk_manager: Arc<RiskManager>,
     dragonfly_manager: Option<Arc<DragonflyManager>>,
     ai_decision_engine: Option<Arc<tokio::sync::Mutex<AIDecisionEngine>>>,
@@ -137,17 +149,20 @@ pub struct SniperBot {
     market_event_receiver: mpsc::Receiver<MarketEvent>,
     signal_sender: mpsc::Sender<StrategySignal>,
     signal_receiver: mpsc::Receiver<StrategySignal>,
+    live_trading_signal_sender: mpsc::Sender<StrategySignal>,
+    trading_signal_receiver: mpsc::Receiver<StrategySignal>,
     opportunity_sender: mpsc::Sender<PotentialOpportunity>,
     opportunity_receiver: mpsc::Receiver<PotentialOpportunity>,
 }
 
 impl SniperBot {
-    pub async fn new(config: AppConfig, dry_run: bool, paper_trading: bool) -> Result<Self> {
+    pub async fn new(config: AppConfig, dry_run: bool, paper_trading: bool) -> Result<(Self, LiveTradingEngine)> {
         info!("🔧 Initializing SniperBot components...");
 
         // Create communication channels
         let (market_event_sender, market_event_receiver) = mpsc::channel::<MarketEvent>(1000);
         let (signal_sender, signal_receiver) = mpsc::channel::<StrategySignal>(100);
+        let (_trading_signal_sender, trading_signal_receiver) = mpsc::channel::<StrategySignal>(100);
         let (opportunity_sender, opportunity_receiver) = mpsc::channel::<PotentialOpportunity>(200);
 
         // Initialize WebSocket Manager with Helius configuration
@@ -212,7 +227,7 @@ impl SniperBot {
 
         // Initialize Strategy Manager with all strategies
         info!("🎯 Initializing Strategy Manager...");
-        let mut strategy_manager = StrategyManager::new(signal_sender.clone());
+        let strategy_manager = StrategyManager::new(signal_sender.clone());
 
         // Add all strategies
         strategy_manager.add_strategy(Box::new(
@@ -285,22 +300,20 @@ impl SniperBot {
 
         // Initialize Trading Engine
         info!("⚡ Initializing Live Trading Engine...");
-        let (trading_engine, signal_sender) = LiveTradingEngineFactory::create(
+        let (trading_engine, live_trading_signal_sender) = LiveTradingEngineFactory::create(
             config.clone(),
             dry_run,
         ).await?;
-        let trading_engine = Arc::new(trading_engine);
 
         info!("✅ All SniperBot components initialized successfully");
 
-        Ok(Self {
+        Ok((Self {
             config,
             dry_run,
             paper_trading,
             websocket_manager,
             data_aggregator,
             strategy_manager,
-            trading_engine,
             risk_manager,
             dragonfly_manager,
             ai_decision_engine,
@@ -310,9 +323,11 @@ impl SniperBot {
             market_event_receiver,
             signal_sender,
             signal_receiver,
+            live_trading_signal_sender,
+            trading_signal_receiver,
             opportunity_sender,
             opportunity_receiver,
-        })
+        }, trading_engine))
     }
 
     pub async fn run(mut self) -> Result<()> {
@@ -326,10 +341,7 @@ impl SniperBot {
             }
         });
 
-        // Start Trading Engine in background
-        // Note: For now, we'll skip starting the trading engine as it requires mutable access
-        // In a real implementation, we'd need to restructure this to handle the ownership properly
-        info!("🔄 Trading Engine ready (start method needs to be implemented)");
+        // Note: Trading Engine will be started after the main loop setup
 
         // Start new UI API server in background
         tokio::spawn(async move {
@@ -508,10 +520,11 @@ impl SniperBot {
         // Log signal details in DRY RUN mode
         if self.dry_run {
             info!("🔍 DRY RUN - Signal details: {:?}", signal.metadata);
-            if let Some(enhanced) = enhanced_signal {
+            if let Some(ref enhanced) = enhanced_signal {
                 info!("🔍 DRY RUN - AI Analysis: {}", enhanced.ai_analysis);
             }
-            return Ok(());
+            // Continue to send signal to Live Trading Engine even in DRY RUN mode
+            // The Live Trading Engine will handle DRY RUN logic
         }
 
         // AI-Enhanced Risk Assessment before execution
@@ -548,9 +561,15 @@ impl SniperBot {
                         }
 
                         // Forward signal to trading engine for execution
-                        // Note: In a real implementation, we'd send this through the signal_sender
                         info!("🎯 Signal ready for execution: {} {} {}",
                               signal.strategy, signal.signal_type, signal.symbol);
+
+                        // SEND SIGNAL TO LIVE TRADING ENGINE FOR REAL EXECUTION!
+                        if let Err(e) = self.live_trading_signal_sender.send(signal.clone()).await {
+                            error!("❌ Failed to send signal to trading engine: {}", e);
+                        } else {
+                            info!("✅ Signal sent to Live Trading Engine for execution!");
+                        }
                     } else {
                         warn!("🚫 Signal execution blocked by risk management");
                         for warning in &risk_assessment.warnings {
@@ -616,9 +635,26 @@ impl SniperBot {
         let strategy_stats = self.strategy_manager.get_performance_stats().await;
         info!("📈 Strategy stats: {:?}", strategy_stats);
 
-        // Check trading engine status
-        let engine_status = self.trading_engine.get_status();
-        info!("⚡ Trading engine status: {:?}", engine_status);
+        // Convert Vec to HashMap for dashboard API
+        let strategy_stats_map: std::collections::HashMap<String, _> = strategy_stats.into_iter().collect();
+
+        // Save strategy performance for dashboard API
+        if let Err(e) = self.save_strategy_performance(&strategy_stats_map).await {
+            warn!("⚠️ Failed to save strategy performance: {}", e);
+        }
+
+        // Save active positions for dashboard API
+        if let Err(e) = self.save_active_positions().await {
+            warn!("⚠️ Failed to save active positions: {}", e);
+        }
+
+        // 🚀 LIVE TRADING: Test mode disabled - bot will only process real market events
+        // Test mode commented out for live trading
+        // if rand::random::<f64>() < 0.3 { // 30% chance every health check (every 30s)
+        //     self.generate_test_pumpfun_event().await;
+        // }
+
+        // Note: Trading engine status check removed - engine runs independently
 
         // Check DragonflyDB health
         if let Some(dragonfly) = &self.dragonfly_manager {
@@ -630,13 +666,52 @@ impl SniperBot {
         }
 
         // Update strategies based on current balance (portfolio-aware activation)
-        let current_balance = self.config.trading.initial_balance; // TODO: Get real balance from balance manager
-        info!("💰 Updating strategies for balance: ${:.2}", current_balance);
+        let current_balance = match self.get_real_sol_balance().await {
+            Ok(balance) => {
+                info!("💰 Real SOL balance: {:.4} SOL", balance);
+                balance
+            }
+            Err(e) => {
+                warn!("⚠️ Failed to get real balance: {}. Using config value.", e);
+                self.config.trading.initial_balance
+            }
+        };
+
+        info!("💰 Updating strategies for balance: {:.4} SOL", current_balance);
         if let Err(e) = self.strategy_manager.update_strategies_for_balance(current_balance).await {
             warn!("⚠️ Failed to update strategies for balance: {}", e);
         } else {
             info!("✅ Portfolio-aware strategy activation completed");
         }
+    }
+
+    /// Get real SOL balance from wallet
+    async fn get_real_sol_balance(&self) -> Result<f64> {
+        use solana_client::rpc_client::RpcClient;
+        use solana_sdk::signature::{Keypair, Signer};
+        use bs58;
+
+        // Get wallet keypair from config
+        let wallet_keypair = if let Some(private_key) = &self.config.solana.private_key {
+            let keypair_bytes = bs58::decode(private_key)
+                .into_vec()
+                .map_err(|e| anyhow::anyhow!("Invalid private key: {}", e))?;
+
+            Keypair::from_bytes(&keypair_bytes)
+                .map_err(|e| anyhow::anyhow!("Failed to create keypair: {}", e))?
+        } else {
+            return Err(anyhow::anyhow!("No wallet private key configured"));
+        };
+
+        // Create RPC client
+        let rpc_client = RpcClient::new(&self.config.solana.rpc_url);
+
+        // Get balance
+        let balance_lamports = rpc_client.get_balance(&wallet_keypair.pubkey())
+            .map_err(|e| anyhow::anyhow!("Failed to get balance: {}", e))?;
+
+        let balance_sol = balance_lamports as f64 / 1_000_000_000.0;
+        Ok(balance_sol)
     }
 
     /// Create mock strategy context for event processing
@@ -687,6 +762,145 @@ impl SniperBot {
         };
 
         StrategyContext::new(aggregated_data, portfolio, market_conditions)
+    }
+
+    /// Save strategy performance data for dashboard API
+    async fn save_strategy_performance(&self, strategy_stats: &std::collections::HashMap<String, sniper_bot::strategy::strategy_manager::StrategyPerformance>) -> Result<()> {
+        use serde_json::json;
+
+        let performance_data = json!({
+            "timestamp": chrono::Utc::now().to_rfc3339(),
+            "strategies": strategy_stats
+        });
+
+        let json_data = serde_json::to_string_pretty(&performance_data)?;
+        tokio::fs::write("/tmp/strategy_performance.json", json_data).await?;
+
+        debug!("💾 Strategy performance saved for dashboard API");
+        Ok(())
+    }
+
+    /// Save trade history for dashboard API
+    async fn save_trade_history(&self, trade_data: serde_json::Value) -> Result<()> {
+        // Read existing trades
+        let mut trades = match tokio::fs::read_to_string("/tmp/trade_history.json").await {
+            Ok(content) => {
+                serde_json::from_str::<serde_json::Value>(&content)
+                    .unwrap_or_else(|_| serde_json::json!({"trades": []}))
+            }
+            Err(_) => serde_json::json!({"trades": []})
+        };
+
+        // Add new trade
+        if let Some(trades_array) = trades.get_mut("trades").and_then(|t| t.as_array_mut()) {
+            trades_array.push(trade_data);
+
+            // Keep only last 100 trades
+            if trades_array.len() > 100 {
+                trades_array.drain(0..trades_array.len() - 100);
+            }
+        }
+
+        // Update timestamp
+        trades["last_updated"] = serde_json::json!(chrono::Utc::now().to_rfc3339());
+
+        let json_data = serde_json::to_string_pretty(&trades)?;
+        tokio::fs::write("/tmp/trade_history.json", json_data).await?;
+
+        debug!("💾 Trade history saved for dashboard API");
+        Ok(())
+    }
+
+    /// Save active positions for dashboard API (placeholder - positions are managed by LiveTradingEngine)
+    async fn save_active_positions(&self) -> Result<()> {
+        // Create empty positions file as placeholder
+        // Real positions are managed by LiveTradingEngine
+        let positions_data = serde_json::json!({
+            "timestamp": chrono::Utc::now().to_rfc3339(),
+            "positions": []
+        });
+
+        let json_data = serde_json::to_string_pretty(&positions_data)?;
+        tokio::fs::write("/tmp/active_positions.json", json_data).await?;
+
+        debug!("💾 Active positions placeholder saved for dashboard API");
+        Ok(())
+    }
+
+    /// 🧪 TEMPORARY: Generate test PumpFun events for strategy testing
+    async fn generate_test_pumpfun_event(&self) {
+        use rand::Rng;
+
+        let mut rng = rand::rng();
+        let event_type = rng.random_range(0..3);
+
+        let test_event = match event_type {
+            0 => {
+                // Generate NewTokenListing event
+                let token_address = format!("TEST{:08x}", rng.random::<u32>());
+                let symbol = format!("MEME{}", rng.random_range(1..1000));
+                let name = format!("Test Meme Token {}", rng.random_range(1..1000));
+                let initial_price = rng.random_range(0.0001..0.01);
+                let initial_liquidity = rng.random_range(5000.0..50000.0);
+
+                info!("🧪 Generating test NewTokenListing: {} ({}) - ${:.4} @ ${:.0} liquidity",
+                      token_address, symbol, initial_price, initial_liquidity);
+
+                MarketEvent::NewTokenListing {
+                    token_address,
+                    symbol: Some(symbol),
+                    name: Some(name),
+                    initial_price: Some(initial_price),
+                    initial_liquidity: Some(initial_liquidity),
+                    creator: Some("test_creator".to_string()),
+                    timestamp: chrono::Utc::now().timestamp_millis() as u64,
+                }
+            }
+            1 => {
+                // Generate large transaction event
+                let token_address = "TESTTOKEN123".to_string();
+                let amount = rng.random_range(1000.0..10000.0);
+                let price = rng.random_range(0.001..0.1);
+
+                info!("🧪 Generating test large transaction: ${:.0} of {} at ${:.4}",
+                      amount, token_address, price);
+
+                MarketEvent::NewTransaction {
+                    signature: format!("test_sig_{:08x}", rng.random::<u32>()),
+                    token_address,
+                    amount,
+                    price: Some(price),
+                    transaction_type: TransactionType::Buy,
+                    timestamp: chrono::Utc::now().timestamp_millis() as u64,
+                }
+            }
+            _ => {
+                // Generate liquidity update event
+                let pool_address = "TESTPOOL456".to_string();
+                let token_a = "TESTTOKEN789".to_string();
+                let liquidity_a = rng.random_range(20000.0..100000.0);
+                let liquidity_b = rng.random_range(20000.0..100000.0);
+                let price = rng.random_range(0.01..1.0);
+
+                info!("🧪 Generating test liquidity update: {} - ${:.0} + ${:.0} @ ${:.4}",
+                      pool_address, liquidity_a, liquidity_b, price);
+
+                MarketEvent::LiquidityUpdate {
+                    pool_address,
+                    token_a,
+                    token_b: "SOL".to_string(),
+                    liquidity_a,
+                    liquidity_b,
+                    price,
+                    timestamp: chrono::Utc::now().timestamp_millis() as u64,
+                }
+            }
+        };
+
+        // Send the test event through the normal processing pipeline
+        if let Err(e) = self.market_event_sender.send(test_event).await {
+            warn!("⚠️ Failed to send test event: {}", e);
+        }
     }
 
 }

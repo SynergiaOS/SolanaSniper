@@ -23,10 +23,66 @@ pub struct BalanceManager {
 #[derive(Debug, Serialize, Deserialize)]
 struct HeliusTokenBalance {
     mint: String,
+    #[serde(deserialize_with = "deserialize_amount")]
     amount: String,
     decimals: u8,
     #[serde(rename = "uiAmount")]
     ui_amount: Option<f64>,
+}
+
+fn deserialize_amount<'de, D>(deserializer: D) -> Result<String, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    use serde::de::{self, Visitor};
+    use std::fmt;
+
+    struct AmountVisitor;
+
+    impl<'de> Visitor<'de> for AmountVisitor {
+        type Value = String;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            formatter.write_str("a string or integer representing token amount")
+        }
+
+        fn visit_str<E>(self, value: &str) -> Result<String, E>
+        where
+            E: de::Error,
+        {
+            Ok(value.to_string())
+        }
+
+        fn visit_u32<E>(self, value: u32) -> Result<String, E>
+        where
+            E: de::Error,
+        {
+            Ok(value.to_string())
+        }
+
+        fn visit_u64<E>(self, value: u64) -> Result<String, E>
+        where
+            E: de::Error,
+        {
+            Ok(value.to_string())
+        }
+
+        fn visit_i32<E>(self, value: i32) -> Result<String, E>
+        where
+            E: de::Error,
+        {
+            Ok(value.to_string())
+        }
+
+        fn visit_i64<E>(self, value: i64) -> Result<String, E>
+        where
+            E: de::Error,
+        {
+            Ok(value.to_string())
+        }
+    }
+
+    deserializer.deserialize_any(AmountVisitor)
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -214,11 +270,20 @@ impl BalanceManager {
             .map_err(|e| TradingError::NetworkError(e.to_string()))?;
 
         if !response.status().is_success() {
-            return Err(TradingError::DataError("Failed to fetch token balances".to_string()));
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+            warn!("Helius API error: {} - {}", status, error_text);
+            return Err(TradingError::DataError(format!("Helius API error: {} - {}", status, error_text)));
         }
 
-        let balance_response: HeliusBalanceResponse = response.json().await
+        // Get response text first for debugging
+        let response_text = response.text().await
             .map_err(|e| TradingError::DataError(e.to_string()))?;
+
+        debug!("Helius API response: {}", response_text);
+
+        let balance_response: HeliusBalanceResponse = serde_json::from_str(&response_text)
+            .map_err(|e| TradingError::DataError(format!("Failed to parse Helius response: {} - Response: {}", e, response_text)))?;
 
         let mut token_balances = HashMap::new();
 

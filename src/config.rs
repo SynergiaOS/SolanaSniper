@@ -457,6 +457,14 @@ impl AppConfig {
 
         config.solana.api_key = env::var("HELIUS_API_KEY").ok();
 
+        // WebSocket configuration
+        if let Ok(helius_ws_url) = env::var("HELIUS_WS_URL") {
+            config.websocket.helius_ws_url = Some(helius_ws_url);
+        }
+        if let Ok(binance_ws_url) = env::var("BINANCE_WS_URL") {
+            config.websocket.binance_ws_url = Some(binance_ws_url);
+        }
+
         // Wallet configuration
         config.solana.private_key = env::var("SOLANA_PRIVATE_KEY").ok();
         config.solana.wallet_path = env::var("SOLANA_WALLET_PATH").ok();

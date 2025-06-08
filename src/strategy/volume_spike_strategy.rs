@@ -167,7 +167,7 @@ impl VolumeSpikeStrategy {
             symbol: trigger.symbol.clone(),
             strength,
             price: trigger.price,
-            size: 100.0, // Default size, should be calculated based on risk management
+            size: 0.05, // 🚀 LIVE TRADING: Small amounts for testing (0.05 SOL)
             timestamp: trigger.timestamp,
             metadata: serde_json::json!({
                 "spike_ratio": trigger.spike_ratio,

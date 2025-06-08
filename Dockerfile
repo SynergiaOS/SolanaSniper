@@ -1,6 +1,6 @@
 # Multi-stage build for SniperBot
 # Stage 1: Build the Rust application
-FROM rust:1.75-slim-bookworm AS builder
+FROM rust:latest AS builder
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -13,10 +13,11 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 # Copy Cargo files
-COPY Cargo.toml Cargo.lock ./
+COPY Cargo.toml ./
 
 # Copy source code
 COPY src ./src
+COPY crates ./crates
 COPY configs ./configs
 
 # Build the application in release mode
@@ -55,11 +56,11 @@ USER sniperbot
 WORKDIR /app
 
 # Expose API port
-EXPOSE 8080
+EXPOSE 8084
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8080/health || exit 1
+    CMD curl -f http://localhost:8084/health || exit 1
 
 # Run the application
 CMD ["./sniper-bot", "--config", "configs/bot.toml"]

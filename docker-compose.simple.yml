@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  # Main SniperBot application - SIMPLE PRODUCTION
+  sniper-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sniperbot-simple
+    restart: unless-stopped
+    ports:
+      - "8084:8084"
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./configs:/app/configs
+    env_file:
+      - .env.production
+    environment:
+      - RUST_LOG=info
+      - BOT_ENVIRONMENT=production
+      - DRAGONFLY_URL=redis://host.docker.internal:6380
+    networks:
+      - sniperbot-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8084/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  sniperbot-network:
+    driver: bridge

@@ -41,7 +41,7 @@ impl TestConfig {
 }
 
 // Simple Redis client for testing
-use redis::{Client, Connection, Commands};
+use redis::{Client, Commands};
 
 pub struct SimpleDbClient {
     client: Client,
@@ -55,7 +55,7 @@ impl SimpleDbClient {
 
     pub async fn health_check(&self) -> Result<bool, Box<dyn std::error::Error>> {
         let mut conn = self.client.get_connection()?;
-        let result: String = conn.ping()?;
+        let result: String = redis::cmd("PING").query(&mut conn)?;
         Ok(result == "PONG")
     }
 

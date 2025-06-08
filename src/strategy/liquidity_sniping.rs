@@ -48,7 +48,7 @@ impl LiquidityPoolSnipingStrategy {
             config: StrategyConfig {
                 enabled: true,
                 confidence_threshold: 0.8,
-                max_position_size: 1000.0,
+                max_position_size: 0.05, // 🚀 LIVE TRADING: Small amounts for testing (0.05 SOL)
                 stop_loss_percentage: 10.0,
                 take_profit_percentage: 25.0,
                 cooldown_seconds: 180, // 3 minute cooldown

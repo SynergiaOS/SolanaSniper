@@ -8,7 +8,7 @@
 
 use crate::{
     config::AppConfig,
-    models::{TradingResult, TradingError, StrategySignal, SignalType, Order},
+    models::{TradingResult, TradingError, StrategySignal, SignalType, Order, ExecutionResult},
     execution::{SniperBotExecutor, EnhancedOrderExecutor},
 };
 use crate::position_management::{PositionManager, ActivePosition};
@@ -60,7 +60,12 @@ impl LiveTradingEngine {
     pub async fn run(&mut self) -> TradingResult<()> {
         info!("🚀 Live Trading Engine: AKTYWNY. Oczekiwanie na decyzje handlowe...");
         info!("💰 Mode: {}", if self.dry_run { "DRY RUN" } else { "LIVE TRADING" });
-        
+
+        // Start background services (balance updates, etc.)
+        info!("🔄 Starting background services...");
+        let _background_handles = self.trading_executor.start_background_services();
+        info!("✅ Background services started");
+
         while let Some(signal) = self.decision_receiver.recv().await {
             info!("🎯 Otrzymano nową decyzję handlową: {} {} {} @ ${:.6} (strength: {:.2})",
                 signal.strategy, signal.signal_type, signal.symbol, signal.price, signal.strength);
@@ -91,7 +96,10 @@ impl LiveTradingEngine {
         match self.trading_executor.execute_order(&order).await {
             Ok(execution_result) => {
                 info!("✅ Transakcja wykonana pomyślnie. ID: {:?}", execution_result.transaction_signature);
-                
+
+                // Save trade to history for dashboard
+                self.save_trade_to_history(signal, &order, &execution_result).await;
+
                 // Handle position management based on signal type
                 match signal.signal_type {
                     SignalType::Buy => {
@@ -125,6 +133,58 @@ impl LiveTradingEngine {
         }
 
         Ok(())
+    }
+
+    /// Save trade to history for dashboard API
+    async fn save_trade_to_history(&self, signal: &StrategySignal, order: &Order, execution_result: &ExecutionResult) {
+        use serde_json::json;
+
+        let trade_data = json!({
+            "id": order.id.to_string(),
+            "timestamp": execution_result.timestamp.to_rfc3339(),
+            "strategy": signal.strategy.clone(),
+            "symbol": signal.symbol.clone(),
+            "action": format!("{:?}", signal.signal_type).to_lowercase(),
+            "amount": order.size,
+            "price": execution_result.filled_price.unwrap_or(0.0),
+            "fees": execution_result.fees_paid,
+            "success": execution_result.success,
+            "error_message": execution_result.error.clone(),
+            "tx_hash": execution_result.transaction_signature.clone(),
+            "pnl": 0.0, // Will be calculated later when position is closed
+            "status": if execution_result.success { "completed" } else { "failed" }
+        });
+
+        // Read existing trades
+        let mut trades = match tokio::fs::read_to_string("/tmp/trade_history.json").await {
+            Ok(content) => {
+                serde_json::from_str::<serde_json::Value>(&content)
+                    .unwrap_or_else(|_| json!({"trades": []}))
+            }
+            Err(_) => json!({"trades": []})
+        };
+
+        // Add new trade
+        if let Some(trades_array) = trades.get_mut("trades").and_then(|t| t.as_array_mut()) {
+            trades_array.push(trade_data);
+
+            // Keep only last 100 trades
+            if trades_array.len() > 100 {
+                trades_array.drain(0..trades_array.len() - 100);
+            }
+        }
+
+        // Update timestamp
+        trades["last_updated"] = json!(chrono::Utc::now().to_rfc3339());
+
+        // Save to file
+        if let Ok(json_data) = serde_json::to_string_pretty(&trades) {
+            if let Err(e) = tokio::fs::write("/tmp/trade_history.json", json_data).await {
+                error!("❌ Failed to save trade history: {}", e);
+            } else {
+                debug!("💾 Trade history saved for dashboard API");
+            }
+        }
     }
 
     /// Convert strategy signal to order
@@ -177,6 +237,16 @@ impl LiveTradingEngine {
             active_strategies: 0, // Would be tracked in real implementation
             portfolio_value: 0.0, // Would be tracked in real implementation
         }
+    }
+
+    /// Get current SOL balance from trading executor
+    pub async fn get_sol_balance(&self) -> TradingResult<f64> {
+        self.trading_executor.get_sol_balance().await
+    }
+
+    /// Get current portfolio value in USD
+    pub async fn get_portfolio_value_usd(&self) -> TradingResult<f64> {
+        self.trading_executor.get_portfolio_value_usd().await
     }
 }
 

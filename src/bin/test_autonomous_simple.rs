@@ -56,7 +56,7 @@ async fn main() -> TradingResult<()> {
     // Health check
     if !db_client.health_check().await? {
         error!("❌ DragonflyDB health check failed");
-        return Err("Database health check failed".into());
+        return Err("Database health check failed".to_string().into());
     }
     
     info!("✅ DragonflyDB health check passed");

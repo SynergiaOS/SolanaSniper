@@ -78,12 +78,18 @@ pub async fn get_signals(State(state): State<AppState>) -> Json<serde_json::Valu
                 metadata,
                 timestamp
             } = event {
+                // Try to extract price from metadata, fallback to default
+                let price = metadata
+                    .get("price")
+                    .and_then(|p| p.as_f64())
+                    .unwrap_or_else(|| get_fallback_price_for_symbol(symbol));
+
                 Some(serde_json::json!({
                     "strategy": strategy,
                     "symbol": symbol,
                     "signal_type": signal_type,
                     "strength": strength,
-                    "price": 100.0, // Mock price for now
+                    "price": price,
                     "timestamp": timestamp.to_rfc3339(),
                     "metadata": metadata
                 }))
@@ -97,4 +103,18 @@ pub async fn get_signals(State(state): State<AppState>) -> Json<serde_json::Valu
         "success": true,
         "data": signals
     }))
+}
+
+/// Get fallback price for symbol (simple price mapping)
+fn get_fallback_price_for_symbol(symbol: &str) -> f64 {
+    match symbol {
+        s if s.contains("SOL") => 20.0,
+        s if s.contains("USDC") => 1.0,
+        s if s.contains("USDT") => 1.0,
+        s if s.contains("BONK") => 0.000025,
+        s if s.contains("WIF") => 2.5,
+        s if s.contains("POPCAT") => 1.2,
+        s if s.contains("BOME") => 0.008,
+        _ => 0.1, // Default for unknown tokens
+    }
 }

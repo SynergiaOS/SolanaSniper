@@ -37,7 +37,7 @@ impl Default for MeteoraDLMMConfig {
             min_liquidity_depth: 25000.0,  // $25k minimum liquidity
             preferred_bin_range: (0.95, 1.05), // 5% range around current price
             min_volume_24h: 100000.0,      // $100k minimum volume
-            max_position_size: 5.0,        // 5 SOL max position
+            max_position_size: 0.05,       // 0.05 SOL max position (small portfolio)
             bin_concentration_threshold: 0.6, // 60% of liquidity in active bins
             rebalance_threshold: 0.02,     // 2% price movement triggers rebalancing
             cooldown_seconds: 180,         // 3 minute cooldown

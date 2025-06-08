@@ -62,12 +62,27 @@ pub struct PositionsQuery {
 pub async fn get_active_positions(
     Query(params): Query<PositionsQuery>,
 ) -> Result<Json<Vec<ActivePosition>>, StatusCode> {
-    info!("🎯 Fetching active positions with filters: {:?}", params);
+    info!("🎯 Fetching real active positions with filters: {:?}", params);
 
-    // TODO: Replace with real data from position manager
-    let mock_positions = generate_mock_positions();
-    
-    let filtered_positions = mock_positions
+    // Try to read real active positions
+    let positions = match read_active_positions().await {
+        Ok(Some(data)) => {
+            if let Some(positions) = data.get("positions").and_then(|p| p.as_array()) {
+                positions
+                    .iter()
+                    .filter_map(|pos| serde_json::from_value::<ActivePosition>(pos.clone()).ok())
+                    .collect()
+            } else {
+                vec![]
+            }
+        }
+        _ => {
+            warn!("⚠️ Active positions cache not available, using fallback");
+            generate_mock_positions()
+        }
+    };
+
+    let filtered_positions = positions
         .into_iter()
         .filter(|pos| {
             if let Some(ref strategy) = params.strategy {
@@ -80,6 +95,12 @@ pub async fn get_active_positions(
 
     info!("✅ Returning {} active positions", filtered_positions.len());
     Ok(Json(filtered_positions))
+}
+
+async fn read_active_positions() -> Result<Option<serde_json::Value>, Box<dyn std::error::Error + Send + Sync>> {
+    let json_data = tokio::fs::read_to_string("/tmp/active_positions.json").await?;
+    let positions_data: serde_json::Value = serde_json::from_str(&json_data)?;
+    Ok(Some(positions_data))
 }
 
 /// Get specific position details
