@@ -26,9 +26,10 @@ pub async fn get_strategies() -> Json<Value> {
     let sol_balance = portfolio_data.get("sol_balance").and_then(|v| v.as_f64()).unwrap_or(0.0);
 
     // Determine active strategies based on balance (matching bot logic)
-    let active_strategies = if sol_balance < 0.5 {
+    // 🧪 TESTING MODE: Lowered thresholds for local testing
+    let active_strategies = if sol_balance < 0.001 {
         vec!["pumpfun_sniping"]
-    } else if sol_balance < 5.0 {
+    } else if sol_balance < 0.01 {
         vec!["pumpfun_sniping", "liquidity_sniping"]
     } else {
         vec!["pumpfun_sniping", "liquidity_sniping", "meteora_dlmm"]

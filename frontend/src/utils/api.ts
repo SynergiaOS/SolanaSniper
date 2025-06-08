@@ -1,6 +1,8 @@
-// SniperBot API Configuration and Utilities
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8084';
-const WS_BASE_URL = import.meta.env.VITE_WS_BASE_URL || 'ws://localhost:8084';
+// OSTATECZNA, LOKALNA WERSJA api.ts
+// W trybie deweloperskim, jawnie wskazujemy na nasze API na porcie 8084
+const API_BASE_URL = 'http://localhost:8084';
+// Lokalnie, używamy niezabezpieczonego WebSocketa
+const WS_BASE_URL = 'ws://localhost:8084';
 
 // Types for SniperBot API responses
 export interface BotStatus {
@@ -76,9 +78,10 @@ export class SniperBotAPI {
   private baseUrl: string;
   private wsUrl: string;
 
-  constructor(baseUrl = API_BASE_URL, wsUrl = WS_BASE_URL) {
-    this.baseUrl = baseUrl;
-    this.wsUrl = wsUrl;
+  constructor() {
+    this.baseUrl = API_BASE_URL;
+    this.wsUrl = WS_BASE_URL;
+    console.log('🔧 API initialized - REST:', this.baseUrl, 'WS:', this.wsUrl);
   }
 
   // REST API Methods
@@ -198,33 +201,37 @@ export class SniperBotAPI {
 
   // WebSocket Connection
   createWebSocket(onMessage: (message: WebSocketMessage) => void, onError?: (error: Event) => void): WebSocket {
+    console.log('🔌 Creating WebSocket connection to:', `${this.wsUrl}/ws`);
     const ws = new WebSocket(`${this.wsUrl}/ws`);
-    
+
     ws.onopen = () => {
-      console.log('🔌 WebSocket connected to SniperBot');
+      console.log('✅ WebSocket connected successfully to SniperBot');
     };
-    
+
     ws.onmessage = (event) => {
       try {
         const message: WebSocketMessage = JSON.parse(event.data);
+        console.log('📨 WebSocket message received:', message);
         onMessage(message);
       } catch (error) {
-        console.error('Failed to parse WebSocket message:', error);
+        console.error('❌ Failed to parse WebSocket message:', error);
       }
     };
-    
+
     ws.onerror = (error) => {
-      console.error('WebSocket error:', error);
+      console.error('❌ WebSocket error:', error);
       if (onError) onError(error);
     };
-    
-    ws.onclose = () => {
-      console.log('🔌 WebSocket disconnected from SniperBot');
+
+    ws.onclose = (event) => {
+      console.log('🔌 WebSocket disconnected from SniperBot. Code:', event.code, 'Reason:', event.reason);
     };
-    
+
     return ws;
   }
 }
 
 // Default API instance
-export const sniperBotAPI = new SniperBotAPI();
+const sniperBotAPI = new SniperBotAPI();
+export { sniperBotAPI };
+export default sniperBotAPI;

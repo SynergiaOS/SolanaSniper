@@ -304,21 +304,22 @@ impl StrategyManager {
         active_strategies.clear();
 
         // Strategy activation based on balance
+        // 🧪 TESTING MODE: Lowered thresholds for local testing
         match sol_balance {
-            // < 0.5 SOL: Only PumpFun sniping (low fees, high risk/reward)
-            balance if balance < 0.5 => {
+            // < 0.001 SOL: Only PumpFun sniping (low fees, high risk/reward)
+            balance if balance < 0.001 => {
                 active_strategies.push("pumpfun_sniping".to_string());
                 info!("💰 Low balance mode: Only PumpFun sniping active");
             }
 
-            // 0.5 - 5 SOL: PumpFun + Liquidity sniping
-            balance if balance < 5.0 => {
+            // 0.001 - 0.01 SOL: PumpFun + Liquidity sniping (TESTING THRESHOLD)
+            balance if balance < 0.01 => {
                 active_strategies.push("pumpfun_sniping".to_string());
                 active_strategies.push("liquidity_sniping".to_string());
                 info!("💰 Medium balance mode: PumpFun + Liquidity sniping active");
             }
 
-            // > 5 SOL: All strategies including arbitrage
+            // > 0.01 SOL: All strategies including arbitrage (TESTING THRESHOLD)
             _ => {
                 active_strategies.push("pumpfun_sniping".to_string());
                 active_strategies.push("liquidity_sniping".to_string());
