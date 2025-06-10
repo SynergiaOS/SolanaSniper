@@ -1,0 +1,108 @@
+# SolanaSniper 3.0 - Git Ignore Rules
+# OPERACJA "SPRING CLEANING" - Zapobieganie powrotowi chaosu
+
+# ===== PYTHON =====
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# ===== VIRTUAL ENVIRONMENTS =====
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+
+# ===== UV PACKAGE MANAGER =====
+.uv/
+
+# ===== IDE & EDITORS =====
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ===== LOGS =====
+*.log
+logs/
+*.out
+
+# ===== ENVIRONMENT VARIABLES =====
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# ===== SCRAPY =====
+output*.json
+backup_*.json
+*.csv
+scrapy_cache/
+
+# ===== TESTING =====
+.coverage
+.pytest_cache/
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+
+# ===== JUPYTER =====
+.ipynb_checkpoints
+
+# ===== DOCKER =====
+.dockerignore
+
+# ===== TEMPORARY FILES =====
+*.tmp
+*.temp
+.cache/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# ===== REDIS & DATABASES =====
+dump.rdb
+*.db
+*.sqlite3
+
+# ===== SOLANASNIPER SPECIFIC =====
+# API Keys (if accidentally committed)
+*api_key*
+*secret*
+*token*
+
+# Output data
+harvester/output/
+data/
+*.json.bak
+
+# Memory test files
+memory_test.py

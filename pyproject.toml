@@ -1,0 +1,119 @@
+[project]
+name = "solanasniperv3"
+version = "3.0.0"
+description = "SolanaSniper 3.0 - Real-Time RAG Trading Intelligence System"
+authors = [
+    {name = "SynergiaOS", email = "202778732+SynergiaOS@users.noreply.github.com"}
+]
+requires-python = ">=3.12"
+dependencies = [
+    # ===== CORE DEPENDENCIES =====
+    "aiohttp>=3.9.0",
+
+    "websockets>=12.0",
+    "redis>=5.0.0",
+    "python-dotenv>=1.0.0",
+
+    # ===== WEB FRAMEWORK (LiveStore) =====
+    "fastapi>=0.104.0",
+    "uvicorn[standard]>=0.24.0",
+    "pydantic[email]>=2.5.0",
+
+    # ===== DATA HARVESTING (Scrapy) =====
+    "scrapy>=2.11.0",
+    "scrapy-aiohttp>=0.1.0",
+
+    # ===== SECURITY & VALIDATION =====
+    "cryptography>=41.0.0",
+
+    # ===== LOGGING & MONITORING =====
+    "python-json-logger>=2.0.0",
+
+    # ===== SOLANA & BLOCKCHAIN =====
+    "solana>=0.30.0",
+    "solders>=0.20.0",
+    "base58>=2.1.0",
+
+    # ===== OPTIONAL: PERFORMANCE =====
+    "uvloop>=0.19.0; sys_platform != 'win32'",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-mock>=3.11.0",
+    "coverage>=7.3.0",
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+]
+test = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-mock>=3.11.0",
+    "coverage>=7.3.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/SynergiaOS/SolanaSniper"
+Repository = "https://github.com/SynergiaOS/SolanaSniper.git"
+Issues = "https://github.com/SynergiaOS/SolanaSniper/issues"
+
+[project.scripts]
+scout = "agents.scout_agent:main"
+analyst = "agents.analyst.analyst_agent:main"
+risk = "agents.risk.risk_agent:main"
+livestore = "livestore.livestore_server:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["agents", "livestore", "harvester"]
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-mock>=3.11.0",
+    "coverage>=7.3.0",
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+]
+
+[tool.black]
+line-length = 88
+target-version = ['py312']
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+select = ["E", "F", "W", "C90", "I", "N", "UP", "YTT", "S", "BLE", "FBT", "B", "A", "COM", "C4", "DTZ", "EM", "EXE", "ISC", "ICN", "G", "INP", "PIE", "PYI", "PT", "Q", "RSE", "RET", "SLF", "SIM", "TID", "ARG", "PTH", "ERA", "PD", "PGH", "PL", "TRY", "NPY", "RUF"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+asyncio_default_test_loop_scope = "function"
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "--verbose",
+    "-ra",
+    "--cov=agents",
+    "--cov=livestore",
+    "--cov=harvester",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+    "chaos: marks tests as chaos engineering tests",
+    "security: marks tests as security penetration tests",
+    "market: marks tests as market scenario tests",
+    "coverage: marks tests as coverage enhancement tests",
+]

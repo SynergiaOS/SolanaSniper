@@ -1,0 +1,27 @@
+{
+  "timestamp": "2025-06-10T07:30:08.996919",
+  "coverage": {
+    "line_coverage": 7.922,
+    "branch_coverage": 0.0,
+    "function_coverage": 82.0,
+    "overall_coverage": 7.922
+  },
+  "mttr": {
+    "avg_recovery_time": 42.5,
+    "max_recovery_time": 55.0,
+    "min_recovery_time": 28.0,
+    "p95_recovery_time": 48.0
+  },
+  "failure_injection": {
+    "injection_rate_per_hour": 41801.84035027018,
+    "total_injections": 150,
+    "test_duration": 12.918091535568237,
+    "success_rate": 0.8
+  },
+  "progress": {
+    "coverage_progress": 8.338947368421053,
+    "mttr_progress": 70.58823529411765,
+    "injection_progress": 100.0,
+    "overall_progress": 59.642394220846235
+  }
+}

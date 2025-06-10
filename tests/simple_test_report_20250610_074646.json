@@ -1,0 +1,19 @@
+{
+  "timestamp": "2025-06-10T07:46:46.729170",
+  "summary": {
+    "total_tests": 6,
+    "passed": 5,
+    "failed": 1,
+    "success_rate": 83.33333333333334
+  },
+  "test_results": [
+    true,
+    true,
+    true,
+    false,
+    true,
+    true
+  ],
+  "status": "FAILED",
+  "execution_time": 0.20116829872131348
+}

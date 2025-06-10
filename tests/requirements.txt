@@ -1,0 +1,59 @@
+# SolanaSniper 3.0 - Test Dependencies
+# OPERACJA "STRESS TEST" - Zależności do testowania
+
+# Core testing framework
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+pytest-mock>=3.11.0
+pytest-cov>=4.1.0
+
+# HTTP testing
+httpx>=0.24.0
+fastapi[all]>=0.100.0
+
+# Mocking and fixtures
+responses>=0.23.0
+factory-boy>=3.3.0
+
+# Performance testing
+pytest-benchmark>=4.0.0
+pytest-xdist>=3.3.0
+
+# Redis testing
+fakeredis>=2.18.0
+
+# Async testing utilities
+pytest-timeout>=2.1.0
+
+# Coverage and reporting
+coverage>=7.3.0
+pytest-html>=3.2.0
+pytest-json-report>=1.5.0
+
+# Security testing
+bandit>=1.7.5
+safety>=2.3.0
+
+# Performance monitoring
+psutil>=5.9.0
+memory-profiler>=0.61.0
+
+# Additional testing utilities
+freezegun>=1.2.2
+parameterized>=0.9.0
+pytest-mock>=3.11.0
+pytest-xdist>=3.3.0
+
+# Chaos Engineering & Advanced Testing
+toxiproxy-python>=0.1.0
+locust>=2.17.0
+numpy>=1.24.0
+PyJWT>=2.8.0
+
+# Market Data Simulation
+scipy>=1.11.0
+pandas>=2.0.0
+
+# Network Testing
+aioresponses>=0.7.4
+pytest-httpserver>=1.0.8
